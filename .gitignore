@@ -1,0 +1,35 @@
+# Build directories
+build/
+build-*/
+CMakeFiles/
+CMakeCache.txt
+Testing/
+compile_commands.json
+
+# Compiled artifacts
+*.o
+*.a
+*.so
+*.so.*
+*.exe
+
+# Package artifacts (e.g. locally downloaded cross-toolchain .debs)
+*.deb
+*.rpm
+
+# Toolchains and caches
+toolchain/
+.cache/
+tmp/
+cache/
+
+# QML/IDE cruft
+.qmlc/
+*.qmlc
+.qrc
+.vscode/
+
+# Editor
+.idea/
+*.swp
+*~
