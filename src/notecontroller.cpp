@@ -1,0 +1,113 @@
+#include "notecontroller.h"
+
+#include "noterepository.h"
+
+#include <QDebug>
+#include <QPointer>
+#include <QTimer>
+
+NoteController::NoteController(NoteRepository *repository, QObject *parent)
+    : QObject(parent)
+    , m_repository(repository)
+{
+}
+
+bool NoteController::isSaving() const
+{
+    return m_saving;
+}
+
+QString NoteController::errorMessage() const
+{
+    return m_errorMessage;
+}
+
+int NoteController::noteCount() const
+{
+    return m_noteCount;
+}
+
+void NoteController::saveNote(const QString &title, const QString &body)
+{
+    if (m_saving) {
+        qInfo().noquote() << QStringLiteral("Save request ignored: a save is already in progress");
+        return;
+    }
+
+    QString validationMessage;
+    if (!isValidInput(title, body, &validationMessage)) {
+        emit validationFailed(validationMessage);
+        return;
+    }
+
+    setErrorMessage(QString());
+    setSaving(true);
+
+    QTimer::singleShot(0, this, [this, weakSelf = QPointer<NoteController>(this), title, body]() {
+        if (!weakSelf)
+            return;
+        doSave(title, body);
+    });
+}
+
+bool NoteController::isValidInput(const QString &title, const QString &body, QString *validationMessage) const
+{
+    if (title.trimmed().isEmpty()) {
+        if (validationMessage)
+            *validationMessage = QStringLiteral("Title is required");
+        return false;
+    }
+    if (body.trimmed().isEmpty()) {
+        if (validationMessage)
+            *validationMessage = QStringLiteral("Content is required");
+        return false;
+    }
+    return true;
+}
+
+void NoteController::doSave(const QString &title, const QString &body)
+{
+    Note createdNote;
+    const bool ok = m_repository && m_repository->createNote(title, body, &createdNote);
+
+    setSaving(false);
+
+    if (ok) {
+        refreshNoteCount();
+        emit noteSaved();
+    } else {
+        const QString message = m_repository ? m_repository->lastError()
+                                             : QStringLiteral("Failed to save note: database unavailable");
+        setErrorMessage(message);
+        emit saveFailed(message);
+    }
+}
+
+void NoteController::refreshNoteCount()
+{
+    setNoteCount(m_repository ? m_repository->count() : 0);
+}
+
+void NoteController::setSaving(bool saving)
+{
+    if (m_saving == saving)
+        return;
+    m_saving = saving;
+    emit savingChanged();
+}
+
+void NoteController::setErrorMessage(const QString &message)
+{
+    if (m_errorMessage == message)
+        return;
+    m_errorMessage = message;
+    emit errorMessageChanged();
+}
+
+void NoteController::setNoteCount(int count)
+{
+    if (m_noteCount == count)
+        return;
+    m_noteCount = count;
+    emit noteCountChanged();
+}

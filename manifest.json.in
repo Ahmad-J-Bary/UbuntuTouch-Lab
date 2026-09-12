@@ -1,0 +1,15 @@
+{
+    "name": "mininotes",
+    "description": "A small, offline-first, privacy-friendly notes app for Ubuntu Touch. Feature 1 (Create Note) only.",
+    "architecture": "$ENV{ARCH}",
+    "title": "MiniNotes",
+    "hooks": {
+        "mininotes": {
+            "apparmor": "mininotes.apparmor",
+            "desktop": "mininotes.desktop"
+        }
+    },
+    "version": "0.1.0",
+    "maintainer": "MiniNotes Developers <mininotes@example.com>",
+    "framework": "$ENV{CLICK_FRAMEWORK}"
+}

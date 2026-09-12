@@ -1,0 +1,6 @@
+clickable_minimum_required: 8.8.0
+builder: cmake
+kill: mininotes
+framework: ubuntu-sdk-20.04
+dependencies_target:
+  - libqt5sql5-sqlite

@@ -1,0 +1,7 @@
+[Desktop Entry]
+_Name=MiniNotes
+Exec=mininotes %U
+Icon=assets/icons/mininotes.svg
+Terminal=false
+Type=Application
+X-Lomiri-Touch=true
