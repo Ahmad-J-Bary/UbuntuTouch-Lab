@@ -5,8 +5,18 @@ import QtQuick.Window 2.12
 Window {
     id: window
     visible: true
-    width: 420
-    height: 760
+
+    // Fill the real on-screen canvas instead of a fixed desktop-sized window.
+    // Fixes tiny UI + dead touch area on Ubuntu Touch (window previously 420x760
+    // logical px, isolated in a corner of the device canvas).
+    readonly property real __fullW: Screen.desktopAvailableWidth > 0
+        ? Screen.desktopAvailableWidth
+        : (Screen.width > 0 ? Screen.width : 420)
+    readonly property real __fullH: Screen.desktopAvailableHeight > 0
+        ? Screen.desktopAvailableHeight
+        : (Screen.height > 0 ? Screen.height : 760)
+    width: window.__fullW
+    height: window.__fullH
     minimumWidth: 320
     minimumHeight: 480
     title: "MiniNotes"
@@ -54,6 +64,10 @@ Window {
     Component.onCompleted: {
         console.log("AUTOMATION-DEBUG context automationMode=" + automationMode
                     + " type=" + (typeof automationMode) + " gate=" + window.__automation)
+        console.log("MININOTES-GEOM screen=" + Screen.width + "x" + Screen.height
+                    + " available=" + Screen.desktopAvailableWidth + "x" + Screen.desktopAvailableHeight
+                    + " dpr=" + window.screen.devicePixelRatio
+                    + " window=" + window.width + "x" + window.height)
         if (window.__automation)
             automationTimer.start()
     }
