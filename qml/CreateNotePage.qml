@@ -161,7 +161,7 @@ Page {
                         border.width: 1
                     }
 
-                    onTextEdited: {
+                    onTextChanged: {
                         if (attempted)
                             validate()
                     }
