@@ -29,7 +29,6 @@ static QString resolveQmlMain()
 
 int main(int argc, char *argv[])
 {
-    QCoreApplication::setOrganizationName(QStringLiteral("MiniNotes"));
     QCoreApplication::setOrganizationDomain(QStringLiteral("mininotes.local"));
     QCoreApplication::setApplicationName(QStringLiteral("mininotes"));
 

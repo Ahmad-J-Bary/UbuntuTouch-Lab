@@ -28,6 +28,7 @@ cache/
 *.qmlc
 .qrc
 .vscode/
+.clickable/
 
 # Editor
 .idea/
