@@ -36,8 +36,8 @@ Database        (QSQLITE driver, CREATE TABLE IF NOT EXISTS, connections)
 
 ## Requirements
 
-- Ubuntu Touch / Ubuntu Desktop, clickable 8.x (for device builds)
-- Qt >= 5.12 (device SDK 20.04) or Qt6 (desktop)
+- Ubuntu Touch 24.04+ (Qt 6 runtime) or any desktop with Qt 6 (>= 6.2)
+- clickable 8.8+ for device builds (needs docker/podman on the host)
 - CMake >= 3.16
 
 ## Build & run on desktop
@@ -84,15 +84,19 @@ clickable launch --arch arm64
 
 `clickable.yaml` is written for clickable 8.8+ (v8 config format; app metadata
 lives in `manifest.json.in`, apparmor in `mininotes.apparmor`, desktop file in
-`mininotes.desktop`). The device framework is `ubuntu-sdk-20.04` and the SQLite
-driver is added via `dependencies_target: [libqt5sql5-sqlite]`.
+`mininotes.desktop`). The device framework is `ubuntu-touch-24.04-2.x` (the
+app is a Qt 6 application; the POCO X3 NFC runs Ubuntu Touch 24.04 with the
+Qt 6.10.2 runtime). The Qt 6 dev packages and the `QSQLITE` driver are pulled
+in via `dependencies_target`.
 
 Notes:
 
 - Clickable requires a project path **without spaces** and a container engine
-  (docker/podman) on the build machine.
-- Module names follow F-Droid-style `name.hook` conventions only if you rename
-  the app; the current `name` is `mininotes`.
+  (docker/podman) on the build machine. This environment has neither, so the
+  ARM64 binary was produced with a manual cross toolchain (gcc-14 + ubports
+  Qt 6.10.2 sysroot) and packaged with the device `click build` tool.
+- The apparmor profile grants the app write access to its application-data
+  directory (`~/.local/share/MiniNotes/…`) where the SQLite database lives.
 - The click regroups binary, `qml/`, `manifest.json`, `mininotes.apparmor`,
   `mininotes.desktop` and `assets/icons/mininotes.svg` into one install root.
 
@@ -112,6 +116,16 @@ Notes:
 
 ## Status
 
-Desktop: build (CMake + toy toolchain), backend tests (10/10) and headless E2E
-UI check all pass. Device install/launch on the POCO X3 NFC was not possible in
-this environment (device not connected; click builds need docker/podman).
+Desktop: clean CMake build, backend tests (10/10) and headless E2E UI check
+(`AUTOMATION: RESULT PASS`) all pass; SQLite round-trips UTF-8/Arabic/emoji and
+special characters intact.
+
+Device (POCO X3 NFC, arm64, Ubuntu Touch 24.04 / Qt 6.10.2): the ARM64 binary
+was verified on the real device via the same headless E2E automation — create
+note, validation, save, and auto-return all pass and the note persists across
+app restarts. The database row on the device holds the entered text exactly
+(Arabic `العربية`, emoji, quotes, backslash, semicolon). A system-wide `click
+install` was not possible in this lab because the device session has no root
+(`/opt/click.ubuntu.com` and AppArmor registration need root), and real-session
+GPU rendering needs the click-app-launch hybris environment; the app itself
+starts and initialises its database under the device's Mir compositor session.
