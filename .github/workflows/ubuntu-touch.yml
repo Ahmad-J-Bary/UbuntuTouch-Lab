@@ -194,6 +194,9 @@ jobs:
     permissions:
       contents: write
     steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
       - name: Download .click artifact
         uses: actions/download-artifact@v4
         with:
@@ -233,5 +236,6 @@ jobs:
           This is the first experimental release.
           EOF
           gh release create "$TAG" "$CLICK_FILE" \
+            --repo "$GITHUB_REPOSITORY" \
             --title "MiniNotes $TAG" \
             --notes-file release-notes.md
