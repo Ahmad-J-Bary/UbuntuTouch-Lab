@@ -134,6 +134,8 @@ jobs:
           docker rm -f ut-sdk
 
       - name: Build ARM64 Click package (clickable)
+        env:
+          CLICKABLE_DOCKER_COMMAND: docker
         run: |
           clickable build --arch arm64 --docker-image "$PROVISIONED_IMAGE" --skip-image-setup
           test -f "build/aarch64-linux-gnu/app/mininotes_${EXPECTED_VERSION}_arm64.click"
