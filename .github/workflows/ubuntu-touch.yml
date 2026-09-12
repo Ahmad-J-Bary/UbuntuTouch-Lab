@@ -199,6 +199,8 @@ jobs:
           path: dist
 
       - name: Create GitHub Release
+        env:
+          GH_TOKEN: ${{ github.token }}
         run: |
           set -euxo pipefail
           VERSION="${{ needs.build.outputs.version }}"
