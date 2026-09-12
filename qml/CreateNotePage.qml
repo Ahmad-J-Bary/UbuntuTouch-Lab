@@ -264,15 +264,15 @@ Page {
 
     Connections {
         target: noteController
-        onNoteSaved: {
+        function onNoteSaved() {
             if (root.StackView.view)
                 root.StackView.view.pop()
         }
-        onSaveFailed: {
+        function onSaveFailed(message) {
             saveErrorLabel.text = message
             saveErrorBox.visible = true
         }
-        onValidationFailed: {
+        function onValidationFailed(message) {
             saveErrorLabel.text = message
             saveErrorBox.visible = true
         }
