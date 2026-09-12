@@ -13,9 +13,10 @@ on:
       - ".gitignore"
   workflow_dispatch:
 
+# Grouped per ref; new runs queue instead of killing the in-flight one so a
+# long provisioning step never dies with "The operation was canceled."
 concurrency:
   group: ${{ github.workflow }}-${{ github.ref }}
-  cancel-in-progress: true
 
 permissions:
   contents: read
@@ -28,6 +29,7 @@ env:
 jobs:
   build:
     runs-on: ubuntu-24.04
+    timeout-minutes: 60
     outputs:
       version: ${{ steps.detect_version.outputs.version }}
     steps:
