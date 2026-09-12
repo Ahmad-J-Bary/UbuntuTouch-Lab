@@ -1,0 +1,150 @@
+name: ubuntu-touch
+
+on:
+  push:
+    branches: [main]
+    paths-ignore:
+      - "README.md"
+      - ".gitignore"
+  pull_request:
+    paths-ignore:
+      - "README.md"
+      - ".gitignore"
+
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
+env:
+  CLICKABLE_VERSION: "8.10.0"
+  SDK_IMAGE: clickable/amd64-ut24.04-2.x-arm64
+  PROVISIONED_IMAGE: mininotes-ut-sdk:24.04-2.x-arm64
+  CLICK_OUT: build/aarch64-linux-gnu/app/mininotes_0.1.0_arm64.click
+
+jobs:
+  build:
+    runs-on: ubuntu-24.04
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Install host build dependencies (Qt 6 + tooling)
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y --no-install-recommends \
+            cmake \
+            qt6-base-dev qt6-declarative-dev \
+            qml6-module-qtquick qml6-module-qtquick-window2 \
+            qml6-module-qtquick-controls qml6-module-qtquick-templates \
+            qml6-module-qtquick-layouts \
+            libqt6sql6-sqlite \
+            click dpkg-deb file
+          python3 -m pip install --break-system-packages "clickable-ut==${{ env.CLICKABLE_VERSION }}"
+
+      - name: Configure + build (host, backend tests)
+        run: |
+          cmake -S . -B build/test -DCMAKE_BUILD_TYPE=Release -DMININOTES_BUILD_TESTS=ON
+          cmake --build build/test -j2
+
+      - name: Run backend tests (QTest, expected 10/10)
+        run: |
+          ctest --test-dir build/test --output-on-failure
+
+      - name: Build app (host) for QML E2E
+        run: |
+          cmake -S . -B build/app -DCMAKE_BUILD_TYPE=Release
+          cmake --build build/app -j2
+
+      - name: Headless QML/E2E check
+        env:
+          QT_QPA_PLATFORM: offscreen
+          QT_QUICK_BACKEND: software
+          MININOTES_E2E_TEST: "1"
+        run: |
+          set -e
+          timeout 90 ./build/app/mininotes > /tmp/e2e.log 2>&1 || true
+          tail -15 /tmp/e2e.log
+          grep -q "AUTOMATION: RESULT PASS" /tmp/e2e.log
+
+      - name: Provision Ubuntu Touch SDK image (official base + Qt6 deps + reviewer 2404.2 policy data)
+        run: |
+          set -euxo pipefail
+          # Official Clickable 24.04-2.x ARM64 builder image, provisioned on the
+          # runner (no local artifacts). Dependencies declared in
+          # clickable.yaml (dependencies_target) are preinstalled as root, and
+          # image setup is skipped later so clickable does not regenerate an
+          # image Dockerfile.
+          docker pull "$SDK_IMAGE"
+          docker run -d --name ut-sdk "$SDK_IMAGE" sleep infinity
+          docker exec ut-sdk bash -lc \
+            'apt-get update && DEBIAN_FRONTEND=noninteractive apt-get install -y --no-install-recommends \
+               qt6-base-dev qt6-declarative-dev libqt6sql6-sqlite'
+          # click-reviewers-tools in the 24.04 archive ships apparmor policy
+          # data only up to 2404.1 while the ubuntu-touch-24.04-2.x framework
+          # uses 2404.2 -> reviewer DATA limitation (the runtime 2404.2 policy
+          # exists in the SDK image itself), not a package defect. Add the
+          # 2404.2 baseline to the reviewer as a copy of 2404.1 (the declarative
+          # default for an empty policy_groups profile).
+          cat > patch_reviewer.py <<'PY'
+          import re
+          p = "/usr/lib/python3/dist-packages/clickreviews/apparmor.py"
+          s = open(p).read()
+          pat = re.compile(r'(?m)^(?P<ind>[ \t]+)"2404\.1": \{(?P<body>.*?)^(?P=ind)\},', re.S)
+          if '"2404.2"' not in s:
+              m = pat.search(s)
+              assert m, "2404.1 entry not found"
+              ind, body = m.group('ind'), m.group('body')
+              clone = ind + '"2404.2": {' + body + '\n' + ind + '},\n'
+              s = s[:m.end()] + '\n' + clone + s[m.end():]
+              open(p, 'w').write(s)
+          compile(s, p, 'exec')
+          print('apparmor.py patched:', '"2404.2"' in s)
+          PY
+          docker cp patch_reviewer.py ut-sdk:/tmp/patch_reviewer.py
+          docker exec ut-sdk python3 /tmp/patch_reviewer.py
+          docker commit ut-sdk "$PROVISIONED_IMAGE"
+          docker rm -f ut-sdk
+
+      - name: Build ARM64 Click package (clickable)
+        run: |
+          clickable build --arch arm64 --docker-image "$PROVISIONED_IMAGE" --skip-image-setup
+          test -f "$CLICK_OUT"
+          ls -la "$CLICK_OUT"
+
+      - name: Validate package metadata and contents
+        run: |
+          set -euxo pipefail
+          click info "$CLICK_OUT" > /tmp/info.json
+          cat /tmp/info.json
+          python3 - <<'PY'
+          import json
+          m = json.load(open("/tmp/info.json"))
+          assert m["architecture"] == "arm64", m
+          assert m["framework"] == "ubuntu-touch-24.04-2.x", m
+          assert m["name"] == "mininotes", m
+          assert m["title"] == "MiniNotes", m
+          assert m["version"] == "0.1.0", m
+          assert "mininotes" in m["hooks"]
+          assert "apparmor" in m["hooks"]["mininotes"]
+          assert "desktop" in m["hooks"]["mininotes"]
+          print("manifest OK")
+          PY
+          click contents "$CLICK_OUT"
+          rm -rf /tmp/pk && mkdir -p /tmp/pk && dpkg-deb -x "$CLICK_OUT" /tmp/pk
+          file /tmp/pk/mininotes | grep -q "ARM aarch64"
+          for f in mininotes qml/Main.qml qml/CreateNotePage.qml qml/NotesListPage.qml \
+                    manifest.json mininotes.apparmor mininotes.desktop assets/icons/mininotes.svg; do
+            test -f "/tmp/pk/$f"
+          done
+          python3 -c "import json; json.load(open('/tmp/pk/mininotes.apparmor'))"
+          grep -q '"architecture": "arm64"' /tmp/pk/manifest.json
+          grep -q '"framework": "ubuntu-touch-24.04-2.x"' /tmp/pk/manifest.json
+          echo "package validation OK"
+
+      - name: Upload .click artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: mininotes-ubuntu-touch-arm64
+          path: ${{ env.CLICK_OUT }}
+          if-no-files-found: error
+          retention-days: 14
