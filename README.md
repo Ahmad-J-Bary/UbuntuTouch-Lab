@@ -92,11 +92,24 @@ in via `dependencies_target`.
 Notes:
 
 - Clickable requires a project path **without spaces** and a container engine
-  (docker/podman) on the build machine. This environment has neither, so the
-  ARM64 binary was produced with a manual cross toolchain (gcc-14 + ubports
-  Qt 6.10.2 sysroot) and packaged with the device `click build` tool.
-- The apparmor profile grants the app write access to its application-data
-  directory (`~/.local/share/MiniNotes/…`) where the SQLite database lives.
+  (docker/podman) on the build machine. This machine has neither sudo nor a
+  container daemon, so a **user-space rootless Podman 5.7.0** is used
+  (`/tmp/opencode/podman-env.sh` + `/tmp/opencode/podman-exec.sh`, image store
+  under `~/.local/share/containers`). It runs in its own user namespace
+  (single-uid mapping, `ignore_chown_errors`, `fuse-overlayfs`).
+- The SDK image (`mininotes-sdk:24.04-2.x-arm64`) is pre-provisioned from
+  `clickable/amd64-ut24.04-2.x-arm64`: apt is forced to stay as root
+  (`/etc/apt/apt.conf.d/99rootless`) because the "__apt" user cannot drop
+  privileges inside the single-uid user namespace, the Qt 6 arm64 dev packages
+  are preinstalled, and click-reviewers-tools is taught the `2404.2` policy.
+- Because clickable 8.10 generates its own image Dockerfile (which fails in
+  this setup), builds are invoked with the pre-provisioned image and image
+  setup disabled:
+  `clickable build --arch arm64 --docker-image localhost/mininotes-sdk:24.04-2.x-arm64 --skip-image-setup`
+- The apparmor profile is declarative (`policy_version` 2404.2, `policy_groups`
+  empty), matching the ubuntu-touch-24.04-2.x framework. The app stores its
+  SQLite database under `~/.local/share/mininotes/` which matches the framework
+  confinement for the package name.
 - The click regroups binary, `qml/`, `manifest.json`, `mininotes.apparmor`,
   `mininotes.desktop` and `assets/icons/mininotes.svg` into one install root.
 
@@ -129,3 +142,8 @@ install` was not possible in this lab because the device session has no root
 (`/opt/click.ubuntu.com` and AppArmor registration need root), and real-session
 GPU rendering needs the click-app-launch hybris environment; the app itself
 starts and initialises its database under the device's Mir compositor session.
+
+Containerized builds: `clickable build --arch arm64` now works end-to-end with
+rootless Podman (see Notes). The produced click passes click-review, reports
+`architecture: arm64` and `framework: ubuntu-touch-24.04-2.x`, and contains the
+binary, `qml/`, manifest, desktop, declarative apparmor and icon.
