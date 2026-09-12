@@ -3,6 +3,7 @@ name: ubuntu-touch
 on:
   push:
     branches: [main]
+    tags: ["v[0-9]+.[0-9]+.[0-9]+"]
     paths-ignore:
       - "README.md"
       - ".gitignore"
@@ -10,23 +11,49 @@ on:
     paths-ignore:
       - "README.md"
       - ".gitignore"
+  workflow_dispatch:
 
 concurrency:
   group: ${{ github.workflow }}-${{ github.ref }}
   cancel-in-progress: true
 
+permissions:
+  contents: read
+
 env:
   CLICKABLE_VERSION: "8.10.0"
   SDK_IMAGE: clickable/amd64-ut24.04-2.x-arm64
   PROVISIONED_IMAGE: mininotes-ut-sdk:24.04-2.x-arm64
-  CLICK_OUT: build/aarch64-linux-gnu/app/mininotes_0.1.0_arm64.click
 
 jobs:
   build:
     runs-on: ubuntu-24.04
+    outputs:
+      version: ${{ steps.detect_version.outputs.version }}
     steps:
       - name: Checkout
         uses: actions/checkout@v4
+
+      - name: Detect application version (single source = CMakeLists.txt)
+        id: detect_version
+        run: |
+          VERSION="$(sed -nE 's/^project\(mininotes VERSION ([0-9.]+).*/\1/p' CMakeLists.txt)"
+          test -n "$VERSION"
+          echo "version=$VERSION" >> "$GITHUB_OUTPUT"
+          echo "EXPECTED_VERSION=$VERSION" >> "$GITHUB_ENV"
+
+      - name: Verify tag matches application version (release gate)
+        run: |
+          if [[ "$GITHUB_REF_NAME" =~ ^v[0-9]+\.[0-9]+\.[0-9]+$ ]]; then
+            TAG_VERSION="${GITHUB_REF_NAME#v}"
+            if [[ "$TAG_VERSION" != "$EXPECTED_VERSION" ]]; then
+              echo "::error::tag \"$GITHUB_REF_NAME\" (version $TAG_VERSION) does not match application version $EXPECTED_VERSION"
+              exit 1
+            fi
+            echo "Release tag $GITHUB_REF_NAME validated against application version $EXPECTED_VERSION"
+          else
+            echo "No release tag (ref: $GITHUB_REF_NAME) - CI-only build"
+          fi
 
       - name: Install host build dependencies (Qt 6 + tooling)
         run: |
@@ -108,22 +135,26 @@ jobs:
       - name: Build ARM64 Click package (clickable)
         run: |
           clickable build --arch arm64 --docker-image "$PROVISIONED_IMAGE" --skip-image-setup
-          test -f "$CLICK_OUT"
-          ls -la "$CLICK_OUT"
+          test -f "build/aarch64-linux-gnu/app/mininotes_${EXPECTED_VERSION}_arm64.click"
+          ls -la "build/aarch64-linux-gnu/app/mininotes_${EXPECTED_VERSION}_arm64.click"
 
       - name: Validate package metadata and contents
+        env:
+          EXPECTED_VERSION: ${{ env.EXPECTED_VERSION }}
         run: |
           set -euxo pipefail
+          CLICK_OUT="build/aarch64-linux-gnu/app/mininotes_${EXPECTED_VERSION}_arm64.click"
           click info "$CLICK_OUT" > /tmp/info.json
           cat /tmp/info.json
-          python3 - <<'PY'
-          import json
+          EXPECTED_VERSION="$EXPECTED_VERSION" python3 - <<'PY'
+          import json, os
+          expected = os.environ["EXPECTED_VERSION"]
           m = json.load(open("/tmp/info.json"))
           assert m["architecture"] == "arm64", m
           assert m["framework"] == "ubuntu-touch-24.04-2.x", m
           assert m["name"] == "mininotes", m
           assert m["title"] == "MiniNotes", m
-          assert m["version"] == "0.1.0", m
+          assert m["version"] == expected, (m["version"], expected)
           assert "mininotes" in m["hooks"]
           assert "apparmor" in m["hooks"]["mininotes"]
           assert "desktop" in m["hooks"]["mininotes"]
@@ -139,12 +170,60 @@ jobs:
           python3 -c "import json; json.load(open('/tmp/pk/mininotes.apparmor'))"
           grep -q '"architecture": "arm64"' /tmp/pk/manifest.json
           grep -q '"framework": "ubuntu-touch-24.04-2.x"' /tmp/pk/manifest.json
+          grep -q "\"version\": \"${EXPECTED_VERSION}\"" /tmp/pk/manifest.json
           echo "package validation OK"
 
       - name: Upload .click artifact
         uses: actions/upload-artifact@v4
         with:
           name: mininotes-ubuntu-touch-arm64
-          path: ${{ env.CLICK_OUT }}
+          path: build/aarch64-linux-gnu/app/mininotes_${{ env.EXPECTED_VERSION }}_arm64.click
           if-no-files-found: error
-          retention-days: 14
+          retention-days: 30
+
+  release:
+    needs: build
+    if: startsWith(github.ref, 'refs/tags/v')
+    runs-on: ubuntu-24.04
+    permissions:
+      contents: write
+    steps:
+      - name: Download .click artifact
+        uses: actions/download-artifact@v4
+        with:
+          name: mininotes-ubuntu-touch-arm64
+          path: dist
+
+      - name: Create GitHub Release
+        run: |
+          set -euxo pipefail
+          VERSION="${{ needs.build.outputs.version }}"
+          TAG="$GITHUB_REF_NAME"
+          test "$TAG" = "v${VERSION}"
+          CLICK_FILE="dist/mininotes_${VERSION}_arm64.click"
+          test -f "$CLICK_FILE"
+          cat > release-notes.md <<EOF
+          # MiniNotes $TAG
+
+          First experimental Ubuntu Touch release.
+
+          ## Features
+
+          - Create Note
+          - SQLite persistence
+          - C++ backend
+          - QML/Qt6 UI
+          - UTF-8 / Arabic / emoji support
+
+          ## Target
+
+          - Ubuntu Touch 24.04-2.x
+          - ARM64
+
+          ## Experimental status
+
+          This is the first experimental release.
+          EOF
+          gh release create "$TAG" "$CLICK_FILE" \
+            --title "MiniNotes $TAG" \
+            --notes-file release-notes.md

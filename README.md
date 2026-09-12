@@ -1,13 +1,28 @@
 # MiniNotes (Ubuntu Touch)
 
 A small, offline-first, privacy-friendly notes app for Ubuntu Touch.
-Currently implements **Feature 1 — CREATE NOTE** only (no search, edit, delete,
-import/export, sync, or extra pages).
+
+| | |
+|---|---|
+| Current version | **0.0.1** |
+| Status | **Experimental** |
+| Platform | Ubuntu Touch |
+| Architecture | arm64 |
+| Framework | ubuntu-touch-24.04-2.x |
+
+MiniNotes 0.0.1 is the first experimental Ubuntu Touch release. It implements
+**Feature 1 — Create Note** only (no search, edit, delete, import/export, sync,
+or extra pages).
 
 Native stack: **QML (QtQuick Controls 2)** frontend + **C++20/17**, **SQLite**
 backend, packaged with **Clickable**. QML never touches the database directly;
 all persistence goes through a C++ controller and repository using prepared
 statements.
+
+> **Device install caveat:** a real device may require an appropriate
+> installation method depending on the Ubuntu Touch image. This release has not
+> been installed as a Click app on a device through the normal app environment,
+> so full touch/on-device acceptance is **not** claimed yet.
 
 ## Architecture
 
@@ -109,7 +124,7 @@ The `.github/workflows/ubuntu-touch.yml` workflow (`ubuntu-touch`) runs on
 6. validates it with `click info` / `click contents` (arch `arm64`, framework
    `ubuntu-touch-24.04-2.x`, AArch64 binary, all packed files present, JSON
    apparmor),
-7. uploads `build/aarch64-linux-gnu/app/mininotes_0.1.0_arm64.click` as the
+7. uploads `build/aarch64-linux-gnu/app/mininotes_0.0.1_arm64.click` as the
    **`mininotes-ubuntu-touch-arm64`** workflow artifact.
 
 The upstream click-reviewer (click-reviewers-tools 0.85) ships AppArmor
@@ -212,7 +227,7 @@ Probed on the device (ubuntu-touch-24.04-2.x, sideload-capable image):
   privileged `click install` (root/password). Per project constraints, the
   production root filesystem, `/opt/click.ubuntu.com`, `/etc/click/` and
   `/var/lib/apparmor/` are **not** modified.
-- The latest click (`build/aarch64-linux-gnu/app/mininotes_0.1.0_arm64.click`)
+- The latest click (`build/aarch64-linux-gnu/app/mininotes_0.0.1_arm64.click`)
   is pushed to the device at `/home/phablet/Documents/` and passes on-device
   inspection/parse checks; final Lomiri-launcher + touch acceptance still
   requires one of the privileged/signed routes above.

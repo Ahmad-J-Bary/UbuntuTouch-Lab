@@ -9,7 +9,7 @@
             "desktop": "mininotes.desktop"
         }
     },
-    "version": "0.1.0",
+    "version": "@PROJECT_VERSION@",
     "maintainer": "MiniNotes Developers <mininotes@example.com>",
     "framework": "$ENV{CLICK_FRAMEWORK}"
 }
