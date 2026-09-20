@@ -306,30 +306,42 @@ jobs:
     runs-on: ubuntu-24.04
     permissions:
       contents: write
+
     steps:
       - name: Checkout
         uses: actions/checkout@v4
 
-      - name: Download .click artifact
+      - name: Download Ubuntu Touch artifact
         uses: actions/download-artifact@v4
         with:
           name: mininotes-ubuntu-touch-arm64
-          path: dist
+          path: dist/ubuntu-touch
 
-      - name: Create GitHub Release
+      - name: Download Linux Desktop artifact
+        uses: actions/download-artifact@v4
+        with:
+          name: mininotes-linux-x86_64
+          path: dist/linux
+
+      - name: Create or update GitHub Release
         env:
           GH_TOKEN: ${{ github.token }}
         run: |
           set -euxo pipefail
+
           VERSION="${{ needs.build.outputs.version }}"
           TAG="$GITHUB_REF_NAME"
+
           test "$TAG" = "v${VERSION}"
-          CLICK_FILE="dist/mininotes_${VERSION}_arm64.click"
+
+          CLICK_FILE="dist/ubuntu-touch/mininotes_${VERSION}_arm64.click"
+          LINUX_FILE="dist/linux/mininotes-${VERSION}-linux-x86_64.tar.gz"
+
           test -f "$CLICK_FILE"
+          test -f "$LINUX_FILE"
+
           cat > release-notes.md <<EOF
           # MiniNotes $TAG
-
-          First experimental Ubuntu Touch release.
 
           ## Features
 
@@ -339,16 +351,32 @@ jobs:
           - QML/Qt6 UI
           - UTF-8 / Arabic / emoji support
 
-          ## Target
+          ## Targets
 
-          - Ubuntu Touch 24.04-1.x
-          - ARM64
+          - Ubuntu Touch 24.04-1.x / ARM64
+          - Linux desktop / x86_64
+
+          ## Artifacts
+
+          - mininotes_${VERSION}_arm64.click
+          - mininotes-${VERSION}-linux-x86_64.tar.gz
 
           ## Experimental status
 
-          This is the first experimental release.
+          This is an experimental development release.
           EOF
-          gh release create "$TAG" "$CLICK_FILE" \
-            --repo "$GITHUB_REPOSITORY" \
-            --title "MiniNotes $TAG" \
-            --notes-file release-notes.md
+
+          if gh release view "$TAG" --repo "$GITHUB_REPOSITORY" >/dev/null 2>&1; then
+            gh release upload "$TAG" \
+              "$CLICK_FILE" \
+              "$LINUX_FILE" \
+              --repo "$GITHUB_REPOSITORY" \
+              --clobber
+          else
+            gh release create "$TAG" \
+              "$CLICK_FILE" \
+              "$LINUX_FILE" \
+              --repo "$GITHUB_REPOSITORY" \
+              --title "MiniNotes $TAG" \
+              --notes-file release-notes.md
+          fi
