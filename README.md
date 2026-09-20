@@ -8,7 +8,7 @@ The project is developed incrementally: each feature is implemented, tested, and
 
 | | |
 |---|---|
-| Current version | **0.2.3** |
+| Current version | **0.2.4** |
 | Status | **Experimental / Development** |
 | Platform | Ubuntu Touch |
 | Target architecture | arm64 |
@@ -38,9 +38,9 @@ Core principles:
 
 ---
 
-# Current status — 0.2.3
+# Current status — 0.2.4
 
-Version **0.2.3** extends the basic create/read/update workflow with permanent deletion and a dedicated mobile UX scaling system.
+Version **0.2.4** extends the basic create/read/update workflow with permanent deletion and a dedicated mobile UX scaling system.
 
 The application currently supports:
 
@@ -59,7 +59,7 @@ The application currently supports:
 - Touch-friendly controls and larger interaction areas.
 - Centralized UI scaling through `qml/UiMetrics.qml`.
 
-The current 0.2.3 UX refinement also keeps the delete-confirmation dialog wider without increasing the scale of the controls inside it.
+The current 0.2.4 UX refinement also keeps the delete-confirmation dialog wider without increasing the scale of the controls inside it.
 
 ---
 
@@ -524,13 +524,13 @@ No version-specific README files are required.
   └── Edit notes
   │
   ▼
-0.2.3
+0.2.4
   │
   ├── Stable browse/read/edit workflow
   └── Mobile UI scaling foundation
   │
   ▼
-0.2.3
+0.2.4
   │
   ├── Swipe-to-reveal Delete
   ├── Permanent SQLite deletion
@@ -540,11 +540,11 @@ No version-specific README files are required.
   └── Delete dialog UX refinement
 ```
 
-The application remains on **0.2.3** for these UI refinements. The version should not be incremented merely for the delete-dialog styling changes.
+The application remains on **0.2.4** for these UI refinements. The version should not be incremented merely for the delete-dialog styling changes.
 
 ---
 
-# Current 0.2.3 UX behavior
+# Current 0.2.4 UX behavior
 
 The delete confirmation dialog is intentionally designed as a compact mobile confirmation surface:
 
@@ -567,4 +567,4 @@ The delete confirmation dialog is intentionally designed as a compact mobile con
 └─────────────────────────────────┘
 ```
 
-Only the dialog surface width/padding is enlarged; the internal control sizing remains governed by the existing 0.2.3 UI metrics.
+Only the dialog surface width/padding is enlarged; the internal control sizing remains governed by the existing 0.2.4 UI metrics.
