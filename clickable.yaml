@@ -1,8 +1,8 @@
 clickable_minimum_required: 8.8.0
 builder: cmake
 kill: mininotes
-framework: ubuntu-touch-24.04-2.x
+framework: ubuntu-touch-24.04-1.x
 dependencies_target:
-  - qt6-base-dev
-  - qt6-declarative-dev
-  - libqt6sql6-sqlite
+  - qtbase5-dev
+  - qtdeclarative5-dev
+  - libqt5sql5-sqlite
