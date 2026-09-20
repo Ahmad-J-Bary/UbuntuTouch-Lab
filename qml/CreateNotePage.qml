@@ -1,6 +1,6 @@
-import QtQuick
-import QtQuick.Controls
-import QtQuick.Layouts
+import QtQuick 2.12
+import QtQuick.Controls 2.12
+import QtQuick.Layouts 1.15
 
 Page {
     id: root
@@ -25,33 +25,25 @@ Page {
 
     ColumnLayout {
         anchors.fill: parent
-
         spacing: 0
-
-        // ---------------------------------------------------------------------
-        // Header
-        // ---------------------------------------------------------------------
 
         Rectangle {
             id: header
 
             Layout.fillWidth: true
             Layout.preferredHeight: root.headerHeight
-
             color: root.headerBackground
 
             Item {
                 id: backArea
 
-                width: 64
+                width: 72
                 height: parent.height
 
                 Rectangle {
                     anchors.fill: parent
-
                     radius: 8
-
-                    color: backTap.pressed
+                    color: backMouse.pressed
                         ? root.headerPress
                         : "transparent"
                 }
@@ -60,7 +52,6 @@ Page {
                     anchors.centerIn: parent
 
                     text: "‹"
-
                     color: root.headerForeground
 
                     font.pointSize: 31
@@ -70,13 +61,14 @@ Page {
                     verticalAlignment: Text.AlignVCenter
                 }
 
-                TapHandler {
-                    id: backTap
+                MouseArea {
+                    id: backMouse
+                    anchors.fill: parent
+                    acceptedButtons: Qt.LeftButton
 
-                    onTapped: {
+                    onClicked: {
                         if (!noteController.saving) {
                             var view = root.StackView.view
-
                             if (view)
                                 view.pop()
                         }
@@ -87,28 +79,20 @@ Page {
             Text {
                 anchors.left: backArea.right
                 anchors.right: parent.right
-
                 anchors.leftMargin: 8
                 anchors.rightMargin: root.pageMargin
-
                 anchors.verticalCenter: parent.verticalCenter
 
                 text: "New Note"
-
                 color: root.headerForeground
 
                 font.pointSize: 20
                 font.weight: Font.DemiBold
 
                 elide: Text.ElideRight
-
                 verticalAlignment: Text.AlignVCenter
             }
         }
-
-        // ---------------------------------------------------------------------
-        // Scrollable form
-        // ---------------------------------------------------------------------
 
         ScrollView {
             id: formScroll
@@ -117,73 +101,54 @@ Page {
             Layout.fillHeight: true
 
             clip: true
-
             contentWidth: availableWidth
 
             ColumnLayout {
                 id: form
 
                 width: formScroll.availableWidth
-
                 spacing: 10
 
-                // Margins
                 Item {
                     Layout.fillWidth: true
-                    Layout.preferredHeight: 4
+                    Layout.preferredHeight: 8
                 }
-
-                // -----------------------------------------------------------------
-                // Title label
-                // -----------------------------------------------------------------
 
                 Text {
                     text: "Title"
-
                     color: root.textSecondary
 
                     font.pointSize: 15
                     font.weight: Font.DemiBold
 
                     Layout.fillWidth: true
+                    Layout.leftMargin: root.pageMargin
+                    Layout.rightMargin: root.pageMargin
                 }
-
-                // -----------------------------------------------------------------
-                // Title field
-                // -----------------------------------------------------------------
 
                 TextField {
                     id: titleField
-
                     objectName: "titleField"
 
                     Layout.fillWidth: true
                     Layout.preferredHeight: root.controlHeight
+                    Layout.leftMargin: root.pageMargin
+                    Layout.rightMargin: root.pageMargin
 
                     placeholderText: "Note title"
-
-                    font.pointSize: 17
-
+                    font.pointSize: 18
                     color: root.textPrimary
-
                     padding: 16
-
-                    selectByMouse: false
 
                     background: Rectangle {
                         radius: 8
-
                         color: "#FFFFFF"
 
-                        border.color:
-                            titleField.activeFocus
-                                ? root.accent
-                                : "#C9C9C9"
+                        border.color: titleField.activeFocus
+                            ? root.accent
+                            : "#C9C9C9"
 
-                        border.width:
-                            titleField.activeFocus
-                                ? 2
-                                : 1
+                        border.width: titleField.activeFocus ? 2 : 1
                     }
 
                     Keys.onReturnPressed:
@@ -196,147 +161,102 @@ Page {
                         if (attempted)
                             validate()
                     }
-
-                    // Explicitly keep touch focus behavior obvious.
-                    TapHandler {
-                        onTapped:
-                            titleField.forceActiveFocus()
-                    }
                 }
-
-                // -----------------------------------------------------------------
-                // Title error
-                // -----------------------------------------------------------------
 
                 Text {
                     id: titleError
-
                     objectName: "titleError"
 
                     visible: false
-
                     text: ""
 
                     color: root.errorColor
-
                     font.pointSize: 13
-
                     wrapMode: Text.WordWrap
 
                     Layout.fillWidth: true
+                    Layout.leftMargin: root.pageMargin
+                    Layout.rightMargin: root.pageMargin
                 }
-
-                // -----------------------------------------------------------------
-                // Content label
-                // -----------------------------------------------------------------
 
                 Text {
                     text: "Content"
-
                     color: root.textSecondary
 
                     font.pointSize: 15
                     font.weight: Font.DemiBold
 
                     Layout.fillWidth: true
-
+                    Layout.leftMargin: root.pageMargin
+                    Layout.rightMargin: root.pageMargin
                     Layout.topMargin: 8
                 }
 
-                // -----------------------------------------------------------------
-                // Body
-                // -----------------------------------------------------------------
-
                 TextArea {
                     id: bodyField
-
                     objectName: "bodyField"
 
                     Layout.fillWidth: true
                     Layout.preferredHeight:
-                        Math.max(220, Math.min(root.height * 0.32, 320))
+                        Math.max(220, Math.min(root.height * 0.34, 320))
+                    Layout.leftMargin: root.pageMargin
+                    Layout.rightMargin: root.pageMargin
 
                     placeholderText: "Write your note..."
 
-                    font.pointSize: 17
-
+                    font.pointSize: 18
                     color: root.textPrimary
-
                     padding: 16
-
                     wrapMode: Text.Wrap
-
-                    selectByMouse: false
 
                     background: Rectangle {
                         radius: 8
-
                         color: "#FFFFFF"
 
-                        border.color:
-                            bodyField.activeFocus
-                                ? root.accent
-                                : "#C9C9C9"
+                        border.color: bodyField.activeFocus
+                            ? root.accent
+                            : "#C9C9C9"
 
-                        border.width:
-                            bodyField.activeFocus
-                                ? 2
-                                : 1
+                        border.width: bodyField.activeFocus ? 2 : 1
                     }
 
                     onTextChanged: {
                         if (attempted)
                             validate()
                     }
-
-                    TapHandler {
-                        onTapped:
-                            bodyField.forceActiveFocus()
-                    }
                 }
-
-                // -----------------------------------------------------------------
-                // Body error
-                // -----------------------------------------------------------------
 
                 Text {
                     id: bodyError
-
                     objectName: "bodyError"
 
                     visible: false
-
                     text: ""
 
                     color: root.errorColor
-
                     font.pointSize: 13
-
                     wrapMode: Text.WordWrap
 
                     Layout.fillWidth: true
+                    Layout.leftMargin: root.pageMargin
+                    Layout.rightMargin: root.pageMargin
                 }
-
-                // -----------------------------------------------------------------
-                // Save error
-                // -----------------------------------------------------------------
 
                 Rectangle {
                     id: saveErrorBox
-
                     objectName: "createPageErrorBox"
 
                     visible: false
 
                     Layout.fillWidth: true
+                    Layout.leftMargin: root.pageMargin
+                    Layout.rightMargin: root.pageMargin
 
                     Layout.preferredHeight:
                         saveErrorLabel.implicitHeight + 28
 
                     radius: 8
-
                     color: "#FDECEA"
-
                     border.color: "#E7C2C0"
                     border.width: 1
 
@@ -347,66 +267,55 @@ Page {
                         anchors.margins: 12
 
                         text: ""
-
                         color: root.errorColor
-
                         font.pointSize: 13
-
                         wrapMode: Text.WordWrap
-
                         verticalAlignment: Text.AlignVCenter
                     }
                 }
 
-                // -----------------------------------------------------------------
-                // Save button
-                // -----------------------------------------------------------------
-
-                Rectangle {
-                    id: saveButton
-
+                Item {
                     Layout.fillWidth: true
                     Layout.preferredHeight: 64
-
+                    Layout.leftMargin: root.pageMargin
+                    Layout.rightMargin: root.pageMargin
                     Layout.topMargin: 6
 
-                    radius: 10
+                    Rectangle {
+                        id: saveButton
+                        anchors.fill: parent
+                        radius: 10
 
-                    color:
-                        !saveTap.enabled
-                            ? "#A98FA6"
-                            : saveTap.pressed
-                                ? "#5E2750"
-                                : root.accent
+                        color: saveMouse.pressed
+                            ? "#5E2750"
+                            : root.accent
 
-                    Text {
-                        anchors.centerIn: parent
+                        opacity: saveMouse.enabled ? 1.0 : 0.65
 
-                        text:
-                            noteController.saving
+                        Text {
+                            anchors.centerIn: parent
+
+                            text: noteController.saving
                                 ? "Saving..."
                                 : "Save"
 
-                        color:
-                            saveTap.enabled
-                                ? "#FFFFFF"
-                                : "#E6DDE4"
-
-                        font.pointSize: 18
-                        font.weight: Font.DemiBold
+                            color: "#FFFFFF"
+                            font.pointSize: 18
+                            font.weight: Font.DemiBold
+                        }
                     }
 
-                    TapHandler {
-                        id: saveTap
+                    MouseArea {
+                        id: saveMouse
+                        anchors.fill: parent
 
                         enabled: !noteController.saving
+                        acceptedButtons: Qt.LeftButton
 
-                        onTapped:
-                            root.submit()
+                        onClicked: root.submit()
                     }
                 }
 
-                // Bottom breathing room.
                 Item {
                     Layout.fillWidth: true
                     Layout.preferredHeight: root.pageMargin
@@ -422,11 +331,7 @@ Page {
 
         if (validate()) {
             saveErrorBox.visible = false
-
-            noteController.saveNote(
-                titleField.text,
-                bodyField.text
-            )
+            noteController.saveNote(titleField.text, bodyField.text)
         }
     }
 

@@ -1,6 +1,6 @@
-import QtQuick
-import QtQuick.Controls
-import QtQuick.Layouts
+import QtQuick 2.12
+import QtQuick.Controls 2.12
+import QtQuick.Layouts 1.15
 
 Page {
     id: root
@@ -10,12 +10,12 @@ Page {
     readonly property color accent: "#77216F"
     readonly property color accentPressed: "#5E2750"
 
-    // Mobile-first dimensions in Qt device-independent coordinates.
     readonly property real pageMargin:
         Math.max(20, Math.min(width * 0.055, 28))
 
     readonly property real headerHeight: 64
 
+    // 96 dp visible button + 112 dp touch target.
     readonly property real fabVisualSize: 96
     readonly property real fabHitSize: 112
 
@@ -31,7 +31,6 @@ Page {
         anchors.top: parent.top
 
         height: root.headerHeight
-
         color: root.headerBackground
 
         Text {
@@ -40,7 +39,6 @@ Page {
             anchors.verticalCenter: parent.verticalCenter
 
             text: "MiniNotes"
-
             color: root.headerForeground
 
             font.pointSize: 21
@@ -68,26 +66,18 @@ Page {
             Column {
                 anchors.centerIn: parent
 
-                width: Math.min(
-                    parent.width,
-                    420
-                )
-
+                width: Math.min(parent.width, 420)
                 spacing: 16
 
                 Text {
                     anchors.horizontalCenter: parent.horizontalCenter
-
                     text: "📝"
-
                     font.pointSize: 56
-
                     horizontalAlignment: Text.AlignHCenter
                 }
 
                 Text {
                     width: parent.width
-
                     horizontalAlignment: Text.AlignHCenter
                     wrapMode: Text.WordWrap
 
@@ -98,21 +88,18 @@ Page {
                             : noteController.noteCount + " notes stored"
 
                     color: "#333333"
-
                     font.pointSize: 21
                     font.weight: Font.DemiBold
                 }
 
                 Text {
                     width: parent.width
-
                     horizontalAlignment: Text.AlignHCenter
                     wrapMode: Text.WordWrap
 
                     text: "Tap + to write your first note"
 
                     color: "#777777"
-
                     font.pointSize: 16
 
                     visible: noteController.noteCount === 0
@@ -121,7 +108,7 @@ Page {
         }
     }
 
-    // Transparent touch target around the visible FAB.
+    // Large touch target; the visual circle remains smaller and centered.
     Item {
         id: fabHitArea
 
@@ -130,9 +117,8 @@ Page {
 
         anchors.right: parent.right
         anchors.bottom: parent.bottom
-
-        anchors.rightMargin: 16
-        anchors.bottomMargin: 16
+        anchors.rightMargin: 12
+        anchors.bottomMargin: 12
 
         Rectangle {
             id: fab
@@ -141,44 +127,38 @@ Page {
             height: root.fabVisualSize
 
             anchors.centerIn: parent
-
             radius: width / 2
 
-            color: fabTap.pressed
+            color: fabMouse.pressed
                 ? root.accentPressed
                 : root.accent
 
-            // Visual feedback.
-            scale: fabTap.pressed ? 0.96 : 1.0
+            scale: fabMouse.pressed ? 0.96 : 1.0
 
             Behavior on scale {
-                NumberAnimation {
-                    duration: 80
-                }
+                NumberAnimation { duration: 80 }
             }
 
             Text {
                 anchors.centerIn: parent
 
                 text: "+"
-
                 color: "#FFFFFF"
 
                 font.pointSize: 38
                 font.weight: Font.Light
 
-                verticalAlignment: Text.AlignVCenter
                 horizontalAlignment: Text.AlignHCenter
+                verticalAlignment: Text.AlignVCenter
             }
         }
 
-        TapHandler {
-            id: fabTap
-
-            // TapHandler is designed for both touchscreen taps and mouse clicks.
-            onTapped: {
+        MouseArea {
+            id: fabMouse
+            anchors.fill: parent
+            acceptedButtons: Qt.LeftButton
+            onClicked: {
                 var view = root.StackView.view
-
                 if (view)
                     view.push("CreateNotePage.qml")
             }
