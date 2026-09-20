@@ -524,7 +524,7 @@ No version-specific README files are required.
   └── Edit notes
   │
   ▼
-0.2.0
+0.2.1
   │
   ├── Stable browse/read/edit workflow
   └── Mobile UI scaling foundation
