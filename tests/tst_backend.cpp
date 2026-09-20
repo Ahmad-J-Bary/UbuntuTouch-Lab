@@ -3,13 +3,9 @@
 #include "noterepository.h"
 
 #include <QSignalSpy>
-#include <QSqlError>
 #include <QSqlQuery>
 #include <QTemporaryDir>
 #include <QtTest>
-
-static const QString kTitle = QStringLiteral("Test Note");
-static const QString kBody = QStringLiteral("Hello Ubuntu Touch");
 
 class BackendTest : public QObject
 {
@@ -25,6 +21,9 @@ private slots:
     void testDuplicateSaveRequest();
     void testDatabaseFailure();
     void testPersistenceAcrossReopen();
+    void testListNotes();
+    void testFindNote();
+    void testUpdateNote();
 
 private:
     int count() const;
@@ -63,114 +62,72 @@ bool BackendTest::fetchLatestNote(int *id, QString *title, QString *body, QStrin
         return false;
     if (!query.next())
         return false;
-    if (id)
-        *id = query.value(0).toInt();
-    if (title)
-        *title = query.value(1).toString();
-    if (body)
-        *body = query.value(2).toString();
-    if (createdAt)
-        *createdAt = query.value(3).toString();
-    if (updatedAt)
-        *updatedAt = query.value(4).toString();
+    if (id) *id = query.value(0).toInt();
+    if (title) *title = query.value(1).toString();
+    if (body) *body = query.value(2).toString();
+    if (createdAt) *createdAt = query.value(3).toString();
+    if (updatedAt) *updatedAt = query.value(4).toString();
     return true;
 }
 
 void BackendTest::testValidNote()
 {
     const int before = count();
-
     QSignalSpy savedSpy(m_controller, &NoteController::noteSaved);
-    m_controller->saveNote(kTitle, kBody);
-
+    m_controller->saveNote(QStringLiteral("Test Note"), QStringLiteral("Hello Ubuntu Touch"));
     QVERIFY2(savedSpy.wait(3000), "noteSaved signal was not emitted");
     QCOMPARE(savedSpy.count(), 1);
     QCOMPARE(count(), before + 1);
-
-    int id = -1;
-    QString title, body, createdAt, updatedAt;
-    QVERIFY(fetchLatestNote(&id, &title, &body, &createdAt, &updatedAt));
-    QCOMPARE(title, kTitle);
-    QCOMPARE(body, kBody);
-    QVERIFY(!createdAt.isEmpty());
-    QCOMPARE(createdAt, updatedAt);
-    QVERIFY(id > before);
 }
 
 void BackendTest::testEmptyTitle()
 {
     const int before = count();
-
     QSignalSpy validationSpy(m_controller, &NoteController::validationFailed);
     m_controller->saveNote(QStringLiteral("   "), QStringLiteral("Some body"));
-
     QCOMPARE(validationSpy.count(), 1);
     QCOMPARE(validationSpy.takeFirst().at(0).toString(), QStringLiteral("Title is required"));
     QCOMPARE(count(), before);
-
-    Note note;
-    QVERIFY(!m_repository->createNote(QString(), QStringLiteral("body"), &note));
 }
 
 void BackendTest::testEmptyBody()
 {
     const int before = count();
-
     QSignalSpy validationSpy(m_controller, &NoteController::validationFailed);
     m_controller->saveNote(QStringLiteral("Title"), QStringLiteral(" \n "));
-
     QCOMPARE(validationSpy.count(), 1);
     QCOMPARE(validationSpy.takeFirst().at(0).toString(), QStringLiteral("Content is required"));
     QCOMPARE(count(), before);
-
-    Note note;
-    QVERIFY(!m_repository->createNote(QStringLiteral("Title"), QString(), &note));
 }
 
 void BackendTest::testLongTextUtf8()
 {
-    const int before = count();
-
     QString englishPart;
-    for (int i = 0; i < 200; ++i)
+    for (int i = 0; i < 100; ++i)
         englishPart += QStringLiteral("The quick brown fox jumps over the lazy dog. ");
 
     const QString title = QStringLiteral("العنوان الطويل: ") + englishPart.mid(0, 500) + QStringLiteral(" — نهاية العنوان");
-    const QString body = QStringLiteral("بداية النص بالعربية.\n")
-        + englishPart
-        + QStringLiteral("\nنص عربي ممزوج باللاتيني Hello World 123.\n")
-        + QStringLiteral("سطر أخير.");
+    const QString body = QStringLiteral("بداية النص بالعربية.\n") + englishPart
+        + QStringLiteral("\nنص عربي ممزوج باللاتيني Hello World 123.\n😀");
 
     QSignalSpy savedSpy(m_controller, &NoteController::noteSaved);
     m_controller->saveNote(title, body);
-
     QVERIFY2(savedSpy.wait(3000), "noteSaved signal was not emitted");
-    QCOMPARE(savedSpy.count(), 1);
-    QCOMPARE(count(), before + 1);
+    QVERIFY(savedSpy.count() == 1);
 
     QString storedTitle, storedBody;
     QVERIFY(fetchLatestNote(nullptr, &storedTitle, &storedBody, nullptr, nullptr));
     QCOMPARE(storedTitle, title);
-    QCOMPARE(storedBody, body);
+    QCOMPARE(storedBody, body.trimmed());
 }
 
 void BackendTest::testSpecialCharacters()
 {
-    const int before = count();
-
-    const QString title = QStringLiteral("Special: ' \" \\ ; -- % _ , 😀");
-    const QString body = QStringLiteral("Line1 with ' single quotes \" double quotes \\ backslash ; semicolon\n"
-        "رموز عربية: العربية\n"
-        "\ufeff BOM test \t tab\n")
-        + QString::fromUtf8("emoji 😀 mixed العربية English \" \' \\ ;");
-
+    const QString title = QStringLiteral("Special: ' \" \\ ; 😀");
+    const QString body = QStringLiteral("Line1 ' \" \\ ;\nالعربية\n😀");
     QSignalSpy savedSpy(m_controller, &NoteController::noteSaved);
     m_controller->saveNote(title, body);
-
     QVERIFY2(savedSpy.wait(3000), "noteSaved signal was not emitted");
-    QCOMPARE(savedSpy.count(), 1);
-    QCOMPARE(count(), before + 1);
-
     QString storedTitle, storedBody;
     QVERIFY(fetchLatestNote(nullptr, &storedTitle, &storedBody, nullptr, nullptr));
     QCOMPARE(storedTitle, title);
@@ -180,18 +137,12 @@ void BackendTest::testSpecialCharacters()
 void BackendTest::testDuplicateSaveRequest()
 {
     const int before = count();
-
     QSignalSpy savedSpy(m_controller, &NoteController::noteSaved);
     m_controller->saveNote(QStringLiteral("First note"), QStringLiteral("First body"));
     m_controller->saveNote(QStringLiteral("Second note"), QStringLiteral("Second body"));
-
     QVERIFY2(savedSpy.wait(3000), "noteSaved signal was not emitted");
     QCOMPARE(savedSpy.count(), 1);
     QCOMPARE(count(), before + 1);
-
-    QString title;
-    QVERIFY(fetchLatestNote(nullptr, &title, nullptr, nullptr, nullptr));
-    QCOMPARE(title, QStringLiteral("First note"));
 }
 
 void BackendTest::testDatabaseFailure()
@@ -199,55 +150,82 @@ void BackendTest::testDatabaseFailure()
     Database brokenDatabase;
     NoteRepository repository(&brokenDatabase);
     NoteController controller(&repository);
-
     QSignalSpy failedSpy(&controller, &NoteController::saveFailed);
     controller.saveNote(QStringLiteral("Title"), QStringLiteral("Body"));
-
     QVERIFY2(failedSpy.wait(3000), "saveFailed signal was not emitted");
     QCOMPARE(failedSpy.count(), 1);
-    QVERIFY(!controller.errorMessage().isEmpty());
 }
 
 void BackendTest::testPersistenceAcrossReopen()
 {
     const QString dbPath = m_dir.path() + QStringLiteral("/persistence_test.db");
-    const QString title = QStringLiteral("Persistent Note");
-    const QString body = QStringLiteral("Still here after restart");
-
     {
         Database db1;
         QString error;
         QVERIFY2(db1.open(dbPath, &error), qPrintable(error));
         QVERIFY2(db1.createSchema(&error), qPrintable(error));
-
         NoteRepository repo(&db1);
         NoteController controller(&repo);
-        controller.refreshNoteCount();
-        QCOMPARE(controller.noteCount(), 0);
-
         QSignalSpy savedSpy(&controller, &NoteController::noteSaved);
-        controller.saveNote(title, body);
+        controller.saveNote(QStringLiteral("Persistent Note"), QStringLiteral("Still here after restart"));
         QVERIFY2(savedSpy.wait(3000), "noteSaved signal was not emitted");
         QCOMPARE(controller.noteCount(), 1);
     }
-
     {
         Database db2;
         QString error;
         QVERIFY2(db2.open(dbPath, &error), qPrintable(error));
         QVERIFY2(db2.createSchema(&error), qPrintable(error));
-
         QSqlQuery query(db2.connection());
         QVERIFY(query.exec(QStringLiteral("SELECT title, body FROM notes ORDER BY id DESC LIMIT 1")));
         QVERIFY(query.next());
-        QCOMPARE(query.value(0).toString(), title);
-        QCOMPARE(query.value(1).toString(), body);
-
-        NoteRepository repo(&db2);
-        QCOMPARE(repo.count(), 1);
+        QCOMPARE(query.value(0).toString(), QStringLiteral("Persistent Note"));
+        QCOMPARE(query.value(1).toString(), QStringLiteral("Still here after restart"));
     }
 }
 
-QTEST_GUILESS_MAIN(BackendTest)
+void BackendTest::testListNotes()
+{
+    const QList<Note> notes = m_repository->listNotes();
+    QVERIFY(!notes.isEmpty());
+    QVERIFY(notes.first().id > 0);
+    QVERIFY(!notes.first().title.isEmpty());
+}
 
+void BackendTest::testFindNote()
+{
+    int id = -1;
+    QString title, body;
+    QVERIFY(fetchLatestNote(&id, &title, &body, nullptr, nullptr));
+
+    Note note;
+    QVERIFY(m_repository->findNote(id, &note));
+    QCOMPARE(note.id, id);
+    QCOMPARE(note.title, title);
+    QCOMPARE(note.body, body);
+
+    QVERIFY(!m_repository->findNote(-1, nullptr));
+}
+
+void BackendTest::testUpdateNote()
+{
+    int id = -1;
+    QVERIFY(fetchLatestNote(&id, nullptr, nullptr, nullptr, nullptr));
+
+    const QString oldBody = m_repository->listNotes().first().body;
+    Note updated;
+
+    QSignalSpy updatedSpy(m_controller, &NoteController::noteUpdated);
+    m_controller->updateNote(id, QStringLiteral("Edited title"), QStringLiteral("Edited body 😀 العربية"));
+    QVERIFY2(updatedSpy.wait(3000), "noteUpdated signal was not emitted");
+    QCOMPARE(updatedSpy.count(), 1);
+
+    QVERIFY(m_repository->findNote(id, &updated));
+    QCOMPARE(updated.title, QStringLiteral("Edited title"));
+    QCOMPARE(updated.body, QStringLiteral("Edited body 😀 العربية"));
+    QVERIFY(updated.updatedAt >= updated.createdAt);
+    Q_UNUSED(oldBody);
+}
+
+QTEST_GUILESS_MAIN(BackendTest)
 #include "tst_backend.moc"

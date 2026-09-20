@@ -1,5 +1,6 @@
 #include "notecontroller.h"
 
+#include "notelistmodel.h"
 #include "noterepository.h"
 
 #include <QDebug>
@@ -9,6 +10,7 @@
 NoteController::NoteController(NoteRepository *repository, QObject *parent)
     : QObject(parent)
     , m_repository(repository)
+    , m_notesModel(new NoteListModel(this))
 {
 }
 
@@ -25,6 +27,11 @@ QString NoteController::errorMessage() const
 int NoteController::noteCount() const
 {
     return m_noteCount;
+}
+
+QAbstractItemModel *NoteController::notesModel() const
+{
+    return m_notesModel;
 }
 
 void NoteController::saveNote(const QString &title, const QString &body)
@@ -50,6 +57,65 @@ void NoteController::saveNote(const QString &title, const QString &body)
     });
 }
 
+void NoteController::updateNote(int id, const QString &title, const QString &body)
+{
+    if (m_saving) {
+        qInfo().noquote() << QStringLiteral("Update request ignored: a save is already in progress");
+        return;
+    }
+
+    QString validationMessage;
+    if (!isValidInput(title, body, &validationMessage)) {
+        emit validationFailed(validationMessage);
+        return;
+    }
+
+    if (id <= 0) {
+        emit updateFailed(QStringLiteral("Invalid note"));
+        return;
+    }
+
+    setErrorMessage(QString());
+    setSaving(true);
+
+    QTimer::singleShot(0, this, [this, weakSelf = QPointer<NoteController>(this), id, title, body]() {
+        if (!weakSelf)
+            return;
+        doUpdate(id, title, body);
+    });
+}
+
+QVariantMap NoteController::getNote(int id) const
+{
+    QVariantMap result;
+    if (!m_repository || id <= 0)
+        return result;
+
+    Note note;
+    if (!m_repository->findNote(id, &note))
+        return result;
+
+    result.insert(QStringLiteral("id"), note.id);
+    result.insert(QStringLiteral("title"), note.title);
+    result.insert(QStringLiteral("body"), note.body);
+    result.insert(QStringLiteral("createdAt"), note.createdAt);
+    result.insert(QStringLiteral("updatedAt"), note.updatedAt);
+    return result;
+}
+
+void NoteController::refreshNotes()
+{
+    const QList<Note> notes = m_repository ? m_repository->listNotes() : QList<Note>();
+    m_notesModel->setNotes(notes);
+    setNoteCount(notes.size());
+    emit notesChanged();
+}
+
+void NoteController::refreshNoteCount()
+{
+    setNoteCount(m_repository ? m_repository->count() : 0);
+}
+
 bool NoteController::isValidInput(const QString &title, const QString &body, QString *validationMessage) const
 {
     if (title.trimmed().isEmpty()) {
@@ -73,7 +139,7 @@ void NoteController::doSave(const QString &title, const QString &body)
     setSaving(false);
 
     if (ok) {
-        refreshNoteCount();
+        refreshNotes();
         emit noteSaved();
     } else {
         const QString message = m_repository ? m_repository->lastError()
@@ -83,9 +149,22 @@ void NoteController::doSave(const QString &title, const QString &body)
     }
 }
 
-void NoteController::refreshNoteCount()
+void NoteController::doUpdate(int id, const QString &title, const QString &body)
 {
-    setNoteCount(m_repository ? m_repository->count() : 0);
+    Note updatedNote;
+    const bool ok = m_repository && m_repository->updateNote(id, title, body, &updatedNote);
+
+    setSaving(false);
+
+    if (ok) {
+        refreshNotes();
+        emit noteUpdated();
+    } else {
+        const QString message = m_repository ? m_repository->lastError()
+                                             : QStringLiteral("Failed to update note: database unavailable");
+        setErrorMessage(message);
+        emit updateFailed(message);
+    }
 }
 
 void NoteController::setSaving(bool saving)

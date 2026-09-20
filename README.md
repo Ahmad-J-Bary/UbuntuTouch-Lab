@@ -1,63 +1,421 @@
 # MiniNotes (Ubuntu Touch)
 
-A small, offline-first, privacy-friendly notes app for Ubuntu Touch.
+MiniNotes is a small, offline-first, privacy-friendly notes application for Ubuntu Touch.
 
-| | |
-|---|---|
-| Current version | **0.1.3** |
-| Status | **Experimental** |
-| Platform | Ubuntu Touch |
-| Architecture | arm64 |
-| Framework | ubuntu-touch-24.04-2.x |
+The project is built as a native Ubuntu Touch application using **QML + Qt 6** for the frontend, **C++17** for the application/backend layer, and **SQLite** for persistent storage.
 
-MiniNotes 0.1.3 is the first experimental Ubuntu Touch release. It implements
-**Feature 1 — Create Note** only (no search, edit, delete, import/export, sync,
-or extra pages).
+The main goal of the project is to learn and validate native Ubuntu Touch application development incrementally, while keeping the architecture simple, maintainable, testable, and suitable for mobile devices.
 
-Native stack: **QML (QtQuick Controls 2)** frontend + **C++20/17**, **SQLite**
-backend, packaged with **Clickable**. QML never touches the database directly;
-all persistence goes through a C++ controller and repository using prepared
-statements.
+|                         |                                |
+| ----------------------- | ------------------------------ |
+| Current version         | **0.1.3**                      |
+| Status                  | **Experimental / Development** |
+| Platform                | Ubuntu Touch                   |
+| Target architecture     | arm64                          |
+| Framework               | `ubuntu-touch-24.04-2.x`       |
+| Device used for testing | POCO X3 NFC (`surya`)          |
+| UI technology           | QML / Qt 6                     |
+| Backend                 | C++17                          |
+| Database                | SQLite                         |
+| Build system            | CMake + Clickable              |
 
-> **Device install caveat:** a real device may require an appropriate
-> installation method depending on the Ubuntu Touch image. This release has not
-> been installed as a Click app on a device through the normal app environment,
-> so full touch/on-device acceptance is **not** claimed yet.
+---
 
-## Architecture
+## Project goals
 
+MiniNotes is being developed incrementally.
+
+Each feature should be completed, tested, and verified on the real Ubuntu Touch device before moving to the next major feature.
+
+The project follows these principles:
+
+* Native Ubuntu Touch technologies.
+* QML for UI only.
+* C++ for application logic and data access.
+* SQLite for persistent local storage.
+* QML must never access SQLite directly.
+* Input must be validated in both UI and C++.
+* Database operations use prepared statements.
+* Touch interaction must be comfortable on mobile screens.
+* Arabic, English, emoji, and special characters must work correctly.
+* Features should be tested on both desktop and the real Ubuntu Touch device.
+
+---
+
+# Current status — 0.1.3
+
+Version **0.1.3** is the current working baseline of the project.
+
+The application successfully:
+
+* Builds for ARM64 using Clickable.
+* Installs on the POCO X3 NFC.
+* Launches correctly through Lomiri.
+* Responds correctly to touch input.
+* Creates notes.
+* Validates empty title/content.
+* Stores notes in SQLite.
+* Preserves UTF-8 content including Arabic and emoji.
+* Persists notes across application restarts.
+* Uses the intended C++ backend architecture.
+
+The current user interface is functional but still requires visual and UX refinement before the project moves to the next major version.
+
+---
+
+# Development roadmap
+
+## 0.1.x — Feature completion and UX refinement
+
+The remaining `0.1.x` work is focused on completing the basic note experience and polishing the mobile interface.
+
+### Feature 1 — Create Note
+
+Status: **Implemented**
+
+The application currently supports:
+
+* Creating a note.
+* Title validation.
+* Content validation.
+* SQLite persistence.
+* Duplicate-save protection.
+* Error reporting.
+* UTF-8 / Arabic / emoji support.
+* Automatic return to the notes screen after saving.
+
+---
+
+### Feature 2 — Browse and Edit Notes
+
+Status: **Next 0.1.x feature**
+
+The notes screen should display the actual stored notes instead of only showing a counter such as:
+
+```text
+2 notes stored
 ```
-QML (Main.qml / NotesListPage.qml / CreateNotePage.qml)
-        │  noteController context property (signals + Q_INVOKABLE saveNote)
-        ▼
-NoteController  (moc-based QObject, QML bridge, saving-state / duplicate-guard)
-        ▼
-NoteRepository  (validation backstop + all SQL via prepared statements)
-        ▼
-Database        (QSQLITE driver, CREATE TABLE IF NOT EXISTS, connections)
-        ▼
-~/…/AppDataLocation/mininotes.db
+
+The planned behavior is:
+
+```text
+Notes List
+    │
+    ├── Note
+    ├── Note
+    ├── Note
+    │
+    └── + New Note
 ```
 
-- DB schema:
-  `notes(id INTEGER PRIMARY KEY AUTOINCREMENT, title TEXT NOT NULL, body TEXT NOT
-  NULL, created_at TEXT NOT NULL, updated_at TEXT NOT NULL)`
-- Insert uses a single prepared statement with parameter binding — no string
-  concatenation, no injection surface.
-- Validation is multi-layered: UI shows messages ("Title is required",
-  "Content is required") and the C++ repository re-checks before writing.
-- UTF-8 is handled end-to-end (Arabic, emoji, quotes, backslashes are
-  round-tripped intact).
+Each note should provide:
 
-## Requirements
+* Title.
+* Short preview of the content.
+* Useful timestamp information.
+* A large touch-friendly area.
 
-- Ubuntu Touch 24.04+ (Qt 6 runtime) or any desktop with Qt 6 (>= 6.2)
-- clickable 8.8+ for device builds (needs docker/podman on the host)
-- A container engine (rootless is fine). This host uses rootless Podman 5.7.0
-  in a user namespace; CI uses Docker on the GitHub runner.
-- CMake >= 3.16 (desktop builds)
+Selecting a note should open a dedicated note page where the user can:
 
-## Build & run on desktop
+* Read the complete note.
+* Edit the title.
+* Edit the content.
+* Save the changes.
+* Return to the notes list.
+
+The existing:
+
+```text
+created_at
+updated_at
+```
+
+database fields will be used to preserve creation and modification timestamps.
+
+---
+
+## 0.1.x — Mobile UX refinement
+
+Before starting `0.2.0`, the interface will receive a dedicated UX pass.
+
+The goal is not simply to increase font sizes, but to make the complete interface more comfortable on the POCO X3 NFC and similar touchscreen devices.
+
+### UI improvements
+
+The following areas will be reviewed and adjusted:
+
+* Header height.
+* Header title size.
+* Back button size.
+* Back button touch area.
+* Screen titles.
+* Text field height.
+* Text field font size.
+* Text area height.
+* Input padding.
+* Labels.
+* Save button size.
+* Save button touch area.
+* Floating `+` button size.
+* Floating `+` touch area.
+* Note card size.
+* Note title typography.
+* Note preview typography.
+* Timestamps.
+* Vertical and horizontal spacing.
+* Bottom safe space around floating controls.
+* Overall visual hierarchy.
+* Scrolling behavior.
+* Touch feedback.
+
+The target is a comfortable mobile UI rather than a desktop UI scaled down to fit a phone.
+
+---
+
+# Planned 0.2.0
+
+`0.2.0` will start only after the basic note workflow and the `0.1.x` UX refinement are complete.
+
+The exact feature set for `0.2.0` will be defined after the current `0.1.x` work is tested on the real device.
+
+Possible future areas include:
+
+* Delete notes.
+* Confirmation dialogs.
+* Search.
+* Better note browsing.
+* Sorting.
+* Empty-state improvements.
+* More complete note metadata handling.
+* Additional UI/UX improvements.
+* Further mobile-specific interaction improvements.
+
+The final `0.2.0` scope should be decided based on the actual behavior of the completed `0.1.x` release rather than being implemented prematurely.
+
+---
+
+# Architecture
+
+```text
+                    QML UI
+                       │
+                       │ signals / properties / Q_INVOKABLE
+                       ▼
+                NoteController
+                       │
+                       ▼
+                NoteRepository
+                       │
+                       ▼
+                    Database
+                       │
+                       ▼
+                    SQLite
+```
+
+### Responsibilities
+
+#### QML
+
+Responsible only for:
+
+* Presentation.
+* Navigation.
+* User interaction.
+* Validation feedback.
+* Displaying model data.
+
+QML must not execute SQL or access the SQLite database directly.
+
+#### NoteController
+
+Responsible for:
+
+* Exposing application operations to QML.
+* Managing saving/updating state.
+* Exposing note data to the UI.
+* Emitting success/failure signals.
+* Protecting against duplicate operations.
+
+#### NoteRepository
+
+Responsible for:
+
+* Validation backstop.
+* SQLite operations.
+* Prepared statements.
+* Creating, reading, updating, and later deleting notes.
+
+#### Database
+
+Responsible for:
+
+* SQLite connection.
+* Database initialization.
+* Schema creation.
+* Database lifecycle.
+
+---
+
+# Database schema
+
+Current schema:
+
+```sql
+CREATE TABLE IF NOT EXISTS notes (
+    id INTEGER PRIMARY KEY AUTOINCREMENT,
+    title TEXT NOT NULL,
+    body TEXT NOT NULL,
+    created_at TEXT NOT NULL,
+    updated_at TEXT NOT NULL
+);
+```
+
+The schema already supports the basic create/read/update workflow planned for the `0.1.x` series.
+
+All database writes should use prepared statements and bound parameters.
+
+---
+
+# Data flow
+
+Creating a note:
+
+```text
+User
+  │
+  ▼
+CreateNotePage.qml
+  │
+  ▼
+NoteController::saveNote()
+  │
+  ▼
+NoteRepository::createNote()
+  │
+  ▼
+SQLite INSERT
+  │
+  ▼
+noteSaved()
+  │
+  ▼
+QML returns to Notes List
+```
+
+Reading a note:
+
+```text
+Notes List
+  │
+  ▼
+NoteController
+  │
+  ▼
+NoteRepository
+  │
+  ▼
+SQLite SELECT
+  │
+  ▼
+QML displays notes
+```
+
+Updating a note:
+
+```text
+EditNotePage.qml
+  │
+  ▼
+NoteController
+  │
+  ▼
+NoteRepository::updateNote()
+  │
+  ▼
+SQLite UPDATE
+  │
+  ▼
+updated_at changed
+  │
+  ▼
+QML refreshes notes
+```
+
+---
+
+# Validation
+
+Validation exists at multiple layers.
+
+The UI provides immediate feedback such as:
+
+```text
+Title is required
+Content is required
+```
+
+The C++ repository validates the same conditions again before performing database operations.
+
+This ensures that the backend does not depend on QML validation for data integrity.
+
+---
+
+# UTF-8 and international text
+
+MiniNotes must correctly support:
+
+* Arabic.
+* English.
+* Mixed Arabic and English.
+* Emoji.
+* Quotes.
+* Backslashes.
+* Semicolons.
+* Newlines.
+* Long text.
+
+Example:
+
+```text
+Hello Ubuntu Touch
+العربية
+مرحبا بالعالم
+😀
+' " \ ;
+```
+
+These values must survive the complete path:
+
+```text
+QML → C++ → SQLite → C++ → QML
+```
+
+without corruption.
+
+---
+
+# Requirements
+
+* Ubuntu Touch 24.04+
+* Qt 6
+* CMake >= 3.16
+* Clickable >= 8.8
+* Docker or Podman for Clickable builds
+* ARM64 Ubuntu Touch device for on-device testing
+
+The current development device is:
+
+```text
+POCO X3 NFC
+Codename: surya
+Architecture: arm64
+Ubuntu Touch: 24.04
+```
+
+---
+
+# Build on desktop
 
 ```sh
 cmake -S . -B build -DCMAKE_BUILD_TYPE=Release
@@ -65,18 +423,28 @@ cmake --build build -j4
 ./build/mininotes
 ```
 
-Notes:
+The QML files are copied next to the executable during the build.
 
-- The QML sources are auto-copied next to the binary (CMake `POST_BUILD`), so
-  the app can be run straight out of the build dir.
-- DB location: your Qt app-data dir (e.g. `~/.local/share/MiniNotes/mininotes/mininotes.db`).
+The SQLite database is stored in Qt's `AppDataLocation`.
 
-## Tests
+---
 
-Backend functional tests (QtTest) cover the mandatory acceptance list: valid
-note, empty title, empty body, long UTF-8 text, special characters
-(`'"\;` Arabic/English/emoji), duplicate save request, database failure, and
-persistence across reopen.
+# Backend tests
+
+The backend test suite covers the important data-layer scenarios, including:
+
+* Valid note creation.
+* Empty title.
+* Empty body.
+* Long UTF-8 text.
+* Arabic and English content.
+* Emoji.
+* Special characters.
+* Duplicate save requests.
+* Database failure.
+* Persistence across reopen.
+
+Build and run:
 
 ```sh
 cmake -S . -B build -DMININOTES_BUILD_TESTS=ON
@@ -84,155 +452,257 @@ cmake --build build -j4
 ctest --test-dir build --output-on-failure
 ```
 
-Run a headless end-to-end UI check (drives validation + save + auto-return):
+The current baseline expects the existing backend suite to pass completely before a release is considered stable.
+
+---
+
+# Headless UI test
+
+The project includes a headless QML/E2E test.
+
+Run:
 
 ```sh
-QT_QPA_PLATFORM=offscreen MININOTES_E2E_TEST=1 ./build/mininotes
-# expect: AUTOMATION: RESULT PASS
+QT_QPA_PLATFORM=offscreen \
+MININOTES_E2E_TEST=1 \
+./build/mininotes
 ```
 
-## Package for Ubuntu Touch (clickable 8)
+Expected result:
+
+```text
+AUTOMATION: RESULT PASS
+```
+
+The E2E test should be extended whenever important user-facing behavior is added.
+
+---
+
+# Build for Ubuntu Touch
+
+Build:
 
 ```sh
-clickable build --arch arm64   # requires docker or podman on the host
-clickable install --arch arm64 # POCO X3 NFC connected via ADB
-clickable launch --arch arm64
+clickable build --arch arm64 --skip-review
 ```
 
-`clickable.yaml` is written for clickable 8.8+ (v8 config format; app metadata
-lives in `manifest.json.in`, apparmor in `mininotes.apparmor`, desktop file in
-`mininotes.desktop`). The device framework is `ubuntu-touch-24.04-2.x` (the
-app is a Qt 6 application; the POCO X3 NFC runs Ubuntu Touch 24.04 with the
-Qt 6.10.2 runtime). The Qt 6 dev packages and the `QSQLITE` driver are pulled
-in via `dependencies_target`. The architecture and framework are *not*
-hardcoded: they come from environment variables set by Clickable
-(`$ENV{ARCH}`, `$ENV{CLICK_FRAMEWORK}`) in `manifest.json.in`.
-
-### CI (GitHub Actions)
-
-The `.github/workflows/ubuntu-touch.yml` workflow (`ubuntu-touch`) runs on
-`ubuntu-24.04` for every push to `main` and every pull request. It:
-
-1. installs Qt 6 + Clickable 8.10.0,
-2. builds and runs the backend test suite (`10/10` expected),
-3. runs the headless QML/E2E automation (`MININOTES_E2E_TEST=1`,
-   `QT_QPA_PLATFORM=offscreen`, expects `AUTOMATION: RESULT PASS`),
-4. provisions the **official** Clickable `clickable/amd64-ut24.04-2.x-arm64`
-   image on the runner (Qt6 arm64 deps + reviewer `2404.2` policy data),
-5. builds the ARM64 click with
-   `clickable build --arch arm64 --docker-image … --skip-image-setup`,
-6. validates it with `click info` / `click contents` (arch `arm64`, framework
-   `ubuntu-touch-24.04-2.x`, AArch64 binary, all packed files present, JSON
-   apparmor),
-7. uploads `build/aarch64-linux-gnu/app/mininotes_0.1.3_arm64.click` as the
-   **`mininotes-ubuntu-touch-arm64`** workflow artifact.
-
-The upstream click-reviewer (click-reviewers-tools 0.85) ships AppArmor
-policy metadata only up to `2404.1`; the ubuntu-touch-24.04-2.x framework
-uses `2404.2`. That is a reviewer *data* limitation (the runtime `2404.2`
-policy exists in the SDK image itself), not a package defect — the workflow
-therefore adds the `2404.2` baseline to the reviewer as a copy of `2404.1`
-(the declarative default for an empty `policy_groups` profile) instead of
-skipping or downgrading the review.
-
-### Local ARM64 build (this machine)
-
-This development host has neither sudo nor a container daemon, so a user-space
-rootless Podman 5.7.0 is used (see Notes below). The validated build command,
-using a locally pre-provisioned SDK image:
+Install on the connected device:
 
 ```sh
-clickable build --arch arm64 \
-  --docker-image localhost/mininotes-sdk:24.04-2.x-arm64 --skip-image-setup
+clickable install --arch arm64
 ```
 
-On a machine with a normal rootless or root Docker/Podman, the plain form
-`clickable build --arch arm64` (letting Clickable provision the official
-image) is equivalent.
+Launch:
 
-Notes:
+```sh
+clickable launch --arch arm64 --skip-kill
+```
 
-- Clickable requires a project path **without spaces** and a container engine
-  (docker/podman) on the build machine. This machine has neither sudo nor a
-  container daemon, so a **user-space rootless Podman 5.7.0** is used
-  (`/tmp/opencode/podman-env.sh` + `/tmp/opencode/podman-exec.sh`, image store
-  under `~/.local/share/containers`). It runs in its own user namespace
-  (single-uid mapping, `ignore_chown_errors`, `fuse-overlayfs`).
-- The SDK image (`mininotes-sdk:24.04-2.x-arm64`) is pre-provisioned from
-  `clickable/amd64-ut24.04-2.x-arm64`: apt is forced to stay as root
-  (`/etc/apt/apt.conf.d/99rootless`) because the "__apt" user cannot drop
-  privileges inside the single-uid user namespace, the Qt 6 arm64 dev packages
-  are preinstalled, and click-reviewers-tools is taught the `2404.2` policy.
-- Because clickable 8.10 generates its own image Dockerfile (which fails in
-  this setup), builds are invoked with the pre-provisioned image and image
-  setup disabled:
-  `clickable build --arch arm64 --docker-image localhost/mininotes-sdk:24.04-2.x-arm64 --skip-image-setup`
-- The apparmor profile is declarative (`policy_version` 2404.2, `policy_groups`
-  empty), matching the ubuntu-touch-24.04-2.x framework. The app stores its
-  SQLite database under `~/.local/share/mininotes/` which matches the framework
-  confinement for the package name.
-- The click regroups binary, `qml/`, `manifest.json`, `mininotes.apparmor`,
-  `mininotes.desktop` and `assets/icons/mininotes.svg` into one install root.
+View application logs:
 
-## Files
+```sh
+clickable log --arch arm64
+```
 
-- `src/note.h` – value type (id, title, body, timestamps)
-- `src/database.h/.cpp` – QSQLITE open/create/close
-- `src/noterepository.h/.cpp` – prepared-statement CRUD (insert/count/…)
-- `src/notecontroller.h/.cpp` – QML-facing controller
-- `src/main.cpp` – app entry, DB init, context properties
-- `qml/Main.qml` – StackView root; optional E2E automation driver
-- `qml/NotesListPage.qml` – home page + add button
-- `qml/CreateNotePage.qml` – create-note form with validation UI
-- `tests/tst_backend.cpp` – QtTest backend suite (10 tests)
-- `clickable.yaml`, `manifest.json.in`, `mininotes.apparmor`,
-  `mininotes.desktop`, `assets/icons/mininotes.svg` – click packaging
+For runtime debugging, the application logs should be inspected before making speculative code changes.
 
-## Status
+---
 
-Desktop: clean CMake build, backend tests (10/10) and headless E2E UI check
-(`AUTOMATION: RESULT PASS`) all pass; SQLite round-trips UTF-8/Arabic/emoji and
-special characters intact.
+# Packaging
 
-CI (GitHub Actions, `.github/workflows/ubuntu-touch.yml`): backend tests,
-headless QML/E2E, ARM64 click build against the official Clickable image,
-package validation, and the `mininotes-ubuntu-touch-arm64` artifact.
+The Click package contains:
 
-Device (POCO X3 NFC, arm64, Ubuntu Touch 24.04 / Qt 6.10.2): the ARM64 binary
-was verified on the real device via the same headless E2E automation — create
-note, validation, save, and auto-return all pass and the note persists across
-app restarts. The database row on the device holds the entered text exactly
-(Arabic `العربية`, emoji, quotes, backslash, semicolon).
+```text
+mininotes
+qml/
+manifest.json
+mininotes.apparmor
+mininotes.desktop
+assets/icons/mininotes.svg
+```
 
-### Device install (POCO) — findings
+Application metadata is defined through:
 
-Probed on the device (ubuntu-touch-24.04-2.x, sideload-capable image):
+```text
+manifest.json.in
+```
 
-- `pkcon`: **absent** — no `pkcon` binary exists anywhere (the
-  `packagekit-tools` package is not installed), so Clickable's own install
-  path (`pkcon install-local --allow-untrusted`) cannot run on this device.
-- PackageKit: daemon present (`/usr/libexec/packagekitd`) but inactive and
-  ships **only the `apt` backend** — it cannot install `.click` packages.
-- Privileged installer present: the `com.lomiri.click` system D-Bus service
-  (`Install(path)`) is D-Bus-activatable and is what OpenStore uses. Its
-  verification path (`debsig-verify`) **rejects unsigned** `.click` packages,
-  so an unsigned local build cannot be installed through it either.
-- `click install` (system path into `/opt/click.ubuntu.com`) requires **root**
-  (phablet has sudo *with* password; no NOPASSWD). `click install --user` is
-  not a supported system-install mode in this framework.
-- Consequence: there is **no working user-space installer** for an unsigned
-  local `.click` on this device. System/GUI installation is only possible by
-  (a) signing the package with a trusted key, (b) using a development image /
-  channel that ships `packagekit-tools` + the click backend, or (c) a
-  privileged `click install` (root/password). Per project constraints, the
-  production root filesystem, `/opt/click.ubuntu.com`, `/etc/click/` and
-  `/var/lib/apparmor/` are **not** modified.
-- The latest click (`build/aarch64-linux-gnu/app/mininotes_0.1.3_arm64.click`)
-  is pushed to the device at `/home/phablet/Documents/` and passes on-device
-  inspection/parse checks; final Lomiri-launcher + touch acceptance still
-  requires one of the privileged/signed routes above.
+The AppArmor profile is:
 
-Containerized builds: `clickable build --arch arm64` now works end-to-end with
-rootless Podman (see Notes) and in CI. The produced click passes click-review,
-reports `architecture: arm64` and `framework: ubuntu-touch-24.04-2.x`, and
-contains the binary, `qml/`, manifest, desktop, declarative apparmor and icon.
+```text
+mininotes.apparmor
+```
+
+The desktop entry is:
+
+```text
+mininotes.desktop
+```
+
+---
+
+# Important Ubuntu Touch development notes
+
+The application is designed specifically for Ubuntu Touch and should be tested through the actual Lomiri environment.
+
+When an application fails to launch, the preferred debugging sequence is:
+
+```text
+Build
+  ↓
+Install
+  ↓
+Launch
+  ↓
+clickable log
+  ↓
+Identify the actual runtime error
+  ↓
+Fix the smallest responsible layer
+  ↓
+Rebuild
+  ↓
+Retest
+```
+
+The goal is to avoid changing QML, C++, packaging, and database code simultaneously when only one layer is responsible for the failure.
+
+---
+
+# Project structure
+
+```text
+MiniNotes/
+│
+├── src/
+│   ├── note.h
+│   ├── database.h
+│   ├── database.cpp
+│   ├── noterepository.h
+│   ├── noterepository.cpp
+│   ├── notecontroller.h
+│   ├── notecontroller.cpp
+│   └── main.cpp
+│
+├── qml/
+│   ├── Main.qml
+│   ├── NotesListPage.qml
+│   ├── CreateNotePage.qml
+│   └── EditNotePage.qml
+│
+├── tests/
+│   └── tst_backend.cpp
+│
+├── assets/
+│   └── icons/
+│       └── mininotes.svg
+│
+├── CMakeLists.txt
+├── clickable.yaml
+├── manifest.json.in
+├── mininotes.apparmor
+├── mininotes.desktop
+└── README.md
+```
+
+The exact file list may grow as new features are introduced.
+
+---
+
+# Development policy
+
+The project is intentionally developed in small, verifiable steps.
+
+A feature should not be considered complete until:
+
+1. The backend implementation works.
+2. The UI implementation works.
+3. Validation is covered.
+4. Persistent storage is verified.
+5. The feature works with real touch interaction.
+6. The feature is tested on the real Ubuntu Touch device.
+7. Runtime logs show no unexpected application errors.
+8. The README reflects the actual project state.
+
+---
+
+# Release progression
+
+```text
+0.1.0
+  │
+  ├── Project foundation
+  │
+0.1.1
+  │
+  ├── Initial Create Note implementation
+  │
+0.1.2
+  │
+  ├── Stability / packaging improvements
+  │
+0.1.3
+  │
+  ├── Working device baseline
+  ├── Create Note
+  ├── SQLite persistence
+  └── Touch interaction
+  │
+  ▼
+0.1.x
+  │
+  ├── Browse stored notes
+  ├── Open notes
+  ├── Edit notes
+  ├── UX / responsive mobile refinement
+  ├── Larger touch targets
+  ├── Typography and spacing improvements
+  └── Real-device verification
+  │
+  ▼
+0.2.0
+  │
+  └── Next feature milestone
+```
+
+The transition to **0.2.0** should happen only after the remaining `0.1.x` work is completed and verified on the real device.
+
+---
+
+# Current development status
+
+### Completed
+
+* Native Qt/QML application foundation.
+* C++ backend.
+* SQLite integration.
+* Database schema.
+* Create Note.
+* Input validation.
+* Prepared statements.
+* UTF-8 / Arabic / emoji handling.
+* Persistence.
+* Duplicate-save protection.
+* ARM64 Clickable build.
+* Real-device installation.
+* Real-device launch.
+* Touch interaction.
+
+### Current 0.1.x work
+
+* Browsing stored notes.
+* Opening a stored note.
+* Editing notes.
+* Updating `updated_at`.
+* Mobile UX refinement.
+* Larger controls and touch targets.
+* Improved typography and spacing.
+* Better note-list presentation.
+
+### Next major milestone
+
+```text
+0.2.0
+```
+
+The exact contents of `0.2.0` will be finalized after the current `0.1.x` work is completed and validated.

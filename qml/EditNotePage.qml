@@ -5,6 +5,10 @@ import QtQuick.Layouts 1.15
 Page {
     id: root
 
+    property int noteId: -1
+    property bool attempted: false
+    property bool loaded: false
+
     readonly property color headerBackground: "#2C001E"
     readonly property color headerForeground: "#FFFFFF"
     readonly property color headerPress: "#4A1731"
@@ -18,6 +22,55 @@ Page {
     readonly property real controlHeight: 78
 
     background: Rectangle { color: "#F5F5F5" }
+
+    Component.onCompleted: loadNote()
+
+    function loadNote() {
+        if (noteId <= 0)
+            return
+
+        var note = noteController.getNote(noteId)
+        if (!note || !note.id) {
+            saveErrorLabel.text = "This note could not be found"
+            saveErrorBox.visible = true
+            return
+        }
+
+        titleField.text = note.title
+        bodyField.text = note.body
+        loaded = true
+    }
+
+    function submit() {
+        attempted = true
+        if (!validate())
+            return
+
+        saveErrorBox.visible = false
+        noteController.updateNote(noteId, titleField.text, bodyField.text)
+    }
+
+    function validate() {
+        var valid = true
+
+        if (titleField.text.trim().length === 0) {
+            titleError.text = "Title is required"
+            titleError.visible = true
+            valid = false
+        } else {
+            titleError.visible = false
+        }
+
+        if (bodyField.text.trim().length === 0) {
+            bodyError.text = "Content is required"
+            bodyError.visible = true
+            valid = false
+        } else {
+            bodyError.visible = false
+        }
+
+        return valid
+    }
 
     ColumnLayout {
         anchors.fill: parent
@@ -67,7 +120,7 @@ Page {
                 anchors.leftMargin: 6
                 anchors.rightMargin: root.pageMargin
                 anchors.verticalCenter: parent.verticalCenter
-                text: "New Note"
+                text: "Edit Note"
                 color: root.headerForeground
                 font.pointSize: 25
                 font.weight: Font.DemiBold
@@ -83,7 +136,6 @@ Page {
             contentWidth: availableWidth
 
             ColumnLayout {
-                id: form
                 width: formScroll.availableWidth
                 spacing: 14
 
@@ -101,7 +153,6 @@ Page {
 
                 TextField {
                     id: titleField
-                    objectName: "titleField"
                     Layout.fillWidth: true
                     Layout.preferredHeight: root.controlHeight
                     Layout.leftMargin: root.pageMargin
@@ -124,7 +175,6 @@ Page {
 
                 Text {
                     id: titleError
-                    objectName: "titleError"
                     visible: false
                     text: ""
                     color: root.errorColor
@@ -148,7 +198,6 @@ Page {
 
                 TextArea {
                     id: bodyField
-                    objectName: "bodyField"
                     Layout.fillWidth: true
                     Layout.preferredHeight: Math.max(260, Math.min(root.height * 0.42, 400))
                     Layout.leftMargin: root.pageMargin
@@ -169,7 +218,6 @@ Page {
 
                 Text {
                     id: bodyError
-                    objectName: "bodyError"
                     visible: false
                     text: ""
                     color: root.errorColor
@@ -182,7 +230,6 @@ Page {
 
                 Rectangle {
                     id: saveErrorBox
-                    objectName: "createPageErrorBox"
                     visible: false
                     Layout.fillWidth: true
                     Layout.preferredHeight: saveErrorLabel.implicitHeight + 30
@@ -217,7 +264,7 @@ Page {
 
                     Text {
                         anchors.centerIn: parent
-                        text: noteController.saving ? "Saving..." : "Save"
+                        text: noteController.saving ? "Saving..." : "Save changes"
                         color: "#FFFFFF"
                         font.pointSize: 20
                         font.weight: Font.DemiBold
@@ -225,7 +272,7 @@ Page {
 
                     TapHandler {
                         id: saveTap
-                        enabled: !noteController.saving
+                        enabled: root.loaded && !noteController.saving
                         onTapped: root.submit()
                     }
                 }
@@ -235,44 +282,15 @@ Page {
         }
     }
 
-    property bool attempted: false
-
-    function submit() {
-        attempted = true
-        if (validate()) {
-            saveErrorBox.visible = false
-            noteController.saveNote(titleField.text, bodyField.text)
-        }
-    }
-
-    function validate() {
-        var valid = true
-        if (titleField.text.trim().length === 0) {
-            titleError.text = "Title is required"
-            titleError.visible = true
-            valid = false
-        } else {
-            titleError.visible = false
-        }
-        if (bodyField.text.trim().length === 0) {
-            bodyError.text = "Content is required"
-            bodyError.visible = true
-            valid = false
-        } else {
-            bodyError.visible = false
-        }
-        return valid
-    }
-
     Connections {
         target: noteController
 
-        function onNoteSaved() {
+        function onNoteUpdated() {
             if (root.StackView.view)
                 root.StackView.view.pop()
         }
 
-        function onSaveFailed(message) {
+        function onUpdateFailed(message) {
             saveErrorLabel.text = message
             saveErrorBox.visible = true
         }

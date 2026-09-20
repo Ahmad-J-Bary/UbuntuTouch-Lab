@@ -68,7 +68,7 @@ int main(int argc, char *argv[])
 
     NoteRepository repository(&database);
     NoteController controller(&repository);
-    controller.refreshNoteCount();
+    controller.refreshNotes();
 
     QQmlApplicationEngine engine;
 

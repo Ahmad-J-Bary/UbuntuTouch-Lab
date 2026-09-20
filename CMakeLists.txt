@@ -11,13 +11,15 @@ find_package(Qt${QT_VERSION_MAJOR} REQUIRED COMPONENTS Core Gui Sql Qml Quick)
 set(MININOTES_SOURCES
     src/database.cpp
     src/noterepository.cpp
-    src/notecontroller.cpp)
+    src/notecontroller.cpp
+    src/notelistmodel.cpp)
 
 set(MININOTES_HEADERS
     src/note.h
     src/database.h
     src/noterepository.h
-    src/notecontroller.h)
+    src/notecontroller.h
+    src/notelistmodel.h)
 
 add_executable(mininotes
     src/main.cpp

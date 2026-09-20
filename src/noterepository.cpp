@@ -7,6 +7,7 @@
 #include <QObject>
 #include <QSqlError>
 #include <QSqlQuery>
+#include <QVariant>
 
 NoteRepository::NoteRepository(Database *database)
     : m_database(database)
@@ -63,6 +64,128 @@ bool NoteRepository::createNote(const QString &title, const QString &body, Note 
     }
 
     return true;
+}
+
+bool NoteRepository::updateNote(int id, const QString &title, const QString &body, Note *updatedNote)
+{
+    m_lastError.clear();
+
+    const QString trimmedTitle = title.trimmed();
+    const QString trimmedBody = body.trimmed();
+
+    if (id <= 0) {
+        m_lastError = QObject::tr("Invalid note");
+        return false;
+    }
+    if (trimmedTitle.isEmpty()) {
+        m_lastError = QObject::tr("Title is required");
+        return false;
+    }
+    if (trimmedBody.isEmpty()) {
+        m_lastError = QObject::tr("Content is required");
+        return false;
+    }
+
+    if (!m_database || !m_database->isOpen()) {
+        m_lastError = QObject::tr("Database is not open");
+        qCritical().noquote() << m_lastError;
+        return false;
+    }
+
+    const QString timestamp = QDateTime::currentDateTime().toString(Qt::ISODate);
+
+    QSqlQuery query(m_database->connection());
+    query.prepare(QStringLiteral(
+        "UPDATE notes SET title = ?, body = ?, updated_at = ? WHERE id = ?"));
+    query.addBindValue(trimmedTitle);
+    query.addBindValue(trimmedBody);
+    query.addBindValue(timestamp);
+    query.addBindValue(id);
+
+    if (!query.exec()) {
+        m_lastError = QObject::tr("Failed to update note: %1").arg(query.lastError().text());
+        qCritical().noquote() << m_lastError;
+        return false;
+    }
+
+    if (query.numRowsAffected() != 1) {
+        m_lastError = QObject::tr("Note was not found");
+        return false;
+    }
+
+    if (updatedNote) {
+        Note note;
+        if (!findNote(id, &note)) {
+            m_lastError = QObject::tr("Note was updated but could not be reloaded");
+            return false;
+        }
+        *updatedNote = note;
+    }
+
+    return true;
+}
+
+bool NoteRepository::findNote(int id, Note *note) const
+{
+    m_lastError.clear();
+
+    if (id <= 0 || !m_database || !m_database->isOpen())
+        return false;
+
+    QSqlQuery query(m_database->connection());
+    query.prepare(QStringLiteral(
+        "SELECT id, title, body, created_at, updated_at "
+        "FROM notes WHERE id = ? LIMIT 1"));
+    query.addBindValue(id);
+
+    if (!query.exec()) {
+        m_lastError = QObject::tr("Failed to read note: %1").arg(query.lastError().text());
+        qWarning().noquote() << m_lastError;
+        return false;
+    }
+
+    if (!query.next())
+        return false;
+
+    if (note) {
+        note->id = query.value(0).toInt();
+        note->title = query.value(1).toString();
+        note->body = query.value(2).toString();
+        note->createdAt = query.value(3).toString();
+        note->updatedAt = query.value(4).toString();
+    }
+
+    return true;
+}
+
+QList<Note> NoteRepository::listNotes() const
+{
+    m_lastError.clear();
+
+    QList<Note> notes;
+    if (!m_database || !m_database->isOpen())
+        return notes;
+
+    QSqlQuery query(m_database->connection());
+    if (!query.exec(QStringLiteral(
+            "SELECT id, title, body, created_at, updated_at "
+            "FROM notes ORDER BY updated_at DESC, id DESC"))) {
+        m_lastError = QObject::tr("Failed to list notes: %1").arg(query.lastError().text());
+        qWarning().noquote() << m_lastError;
+        return notes;
+    }
+
+    while (query.next()) {
+        Note note;
+        note.id = query.value(0).toInt();
+        note.title = query.value(1).toString();
+        note.body = query.value(2).toString();
+        note.createdAt = query.value(3).toString();
+        note.updatedAt = query.value(4).toString();
+        notes.append(note);
+    }
+
+    return notes;
 }
 
 int NoteRepository::count() const

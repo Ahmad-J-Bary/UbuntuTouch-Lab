@@ -1,6 +1,8 @@
 #pragma once
 
 #include "note.h"
+
+#include <QList>
 #include <QString>
 
 class Database;
@@ -14,6 +16,9 @@ public:
     NoteRepository &operator=(const NoteRepository &) = delete;
 
     bool createNote(const QString &title, const QString &body, Note *createdNote = nullptr);
+    bool updateNote(int id, const QString &title, const QString &body, Note *updatedNote = nullptr);
+    bool findNote(int id, Note *note) const;
+    QList<Note> listNotes() const;
     int count() const;
     QString lastError() const;
 
