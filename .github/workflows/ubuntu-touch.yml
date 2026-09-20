@@ -209,8 +209,99 @@ jobs:
           if-no-files-found: error
           retention-days: 30
 
+  linux_release:
+    if: startsWith(github.ref, 'refs/tags/v')
+    runs-on: ubuntu-24.04
+    timeout-minutes: 20
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Install Linux Qt build dependencies
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y --no-install-recommends \
+            cmake \
+            qt6-base-dev \
+            qt6-declarative-dev \
+            qml6-module-qtquick \
+            qml6-module-qtquick-window \
+            qml6-module-qtquick-controls \
+            qml6-module-qtquick-templates \
+            qml6-module-qtquick-layouts \
+            qml6-module-qtqml-workerscript \
+            libqt6sql6-sqlite
+
+      - name: Build Linux Desktop release
+        run: |
+          cmake --preset linux-release
+          cmake --build --preset linux-release
+
+          test -x build/linux-release/mininotes
+
+      - name: Package Linux Desktop
+        env:
+          VERSION: ${{ github.ref_name }}
+        run: |
+          set -euxo pipefail
+
+          VERSION="${VERSION#v}"
+          PACKAGE_DIR="mininotes-${VERSION}-linux-x86_64"
+          ARCHIVE="mininotes-${VERSION}-linux-x86_64.tar.gz"
+
+          rm -rf "dist/$PACKAGE_DIR"
+          mkdir -p "dist/$PACKAGE_DIR"
+
+          cp build/linux-release/mininotes \
+             "dist/$PACKAGE_DIR/"
+
+          cp -R build/linux-release/qml \
+             "dist/$PACKAGE_DIR/"
+
+          mkdir -p \
+            "dist/$PACKAGE_DIR/assets/icons"
+
+          cp assets/icons/mininotes.svg \
+             "dist/$PACKAGE_DIR/assets/icons/"
+
+          cp mininotes.desktop \
+             "dist/$PACKAGE_DIR/"
+
+          cat > "dist/$PACKAGE_DIR/README.txt" <<EOF
+          MiniNotes ${VERSION}
+          Linux x86_64 desktop build
+
+          Run:
+            ./mininotes
+
+          Runtime:
+            Qt 6
+            SQLite
+
+          The application stores its data using the operating system's
+          application data location.
+          EOF
+
+          tar -C dist \
+            -czf "dist/$ARCHIVE" \
+            "$PACKAGE_DIR"
+
+          test -f "dist/$ARCHIVE"
+          ls -lh "dist/$ARCHIVE"
+
+      - name: Upload Linux release artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: mininotes-linux-x86_64
+          path: dist/mininotes-*-linux-x86_64.tar.gz
+          if-no-files-found: error
+          retention-days: 30
+
   release:
-    needs: build
+    needs:
+      - build
+      - linux_release
     if: startsWith(github.ref, 'refs/tags/v')
     runs-on: ubuntu-24.04
     permissions:
