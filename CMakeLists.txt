@@ -9,6 +9,7 @@ find_package(QT NAMES Qt6 Qt5 REQUIRED COMPONENTS Core)
 find_package(Qt${QT_VERSION_MAJOR} REQUIRED COMPONENTS Core Gui Sql Qml Quick)
 
 set(MININOTES_SOURCES
+    src/platform/qt/qt_platform_paths.cpp
     src/application/note_service.cpp
     src/data/sqlite/database.cpp
     src/data/sqlite/sqlite_note_repository.cpp
@@ -16,6 +17,8 @@ set(MININOTES_SOURCES
     src/presentation/note_list_model.cpp)
 
 set(MININOTES_HEADERS
+    src/platform/platform_paths.h
+    src/platform/qt/qt_platform_paths.h
     src/application/note_service.h
     src/domain/note.h
     src/domain/inote_repository.h
@@ -87,4 +90,19 @@ if(MININOTES_BUILD_TESTS)
         Qt${QT_VERSION_MAJOR}::Test)
 
     add_test(NAME mininotes_service_test COMMAND mininotes_service_test)
+
+    add_executable(mininotes_platform_test
+        tests/tst_platform_paths.cpp
+        src/platform/qt/qt_platform_paths.cpp
+        src/platform/qt/qt_platform_paths.h
+        src/platform/platform_paths.h)
+
+    target_include_directories(mininotes_platform_test PRIVATE
+        ${CMAKE_CURRENT_SOURCE_DIR}/src)
+
+    target_link_libraries(mininotes_platform_test PRIVATE
+        Qt${QT_VERSION_MAJOR}::Core
+        Qt${QT_VERSION_MAJOR}::Test)
+
+    add_test(NAME mininotes_platform_test COMMAND mininotes_platform_test)
 endif()
