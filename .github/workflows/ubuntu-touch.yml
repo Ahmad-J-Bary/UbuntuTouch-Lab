@@ -71,12 +71,12 @@ jobs:
 
       - name: Configure + build (host, backend tests)
         run: |
-          cmake -S . -B build/test -DCMAKE_BUILD_TYPE=Release -DMININOTES_BUILD_TESTS=ON
-          cmake --build build/test -j2
+          cmake --preset linux-tests
+          cmake --build --preset linux-tests
 
       - name: Run backend tests (QTest)
         run: |
-          ctest --test-dir build/test --output-on-failure
+          ctest --preset linux-tests
 
       - name: Verify architecture boundaries
         run: |
@@ -96,8 +96,8 @@ jobs:
 
       - name: Build app (host) for QML E2E
         run: |
-          cmake -S . -B build/app -DCMAKE_BUILD_TYPE=Release
-          cmake --build build/app -j2
+          cmake --preset linux-e2e
+          cmake --build --preset linux-e2e
 
       - name: Headless QML/E2E check
         env:
@@ -106,7 +106,7 @@ jobs:
           MININOTES_E2E_TEST: "1"
         run: |
           set -e
-          timeout 90 ./build/app/mininotes > /tmp/e2e.log 2>&1 || true
+          timeout 90 ./build/linux-e2e/mininotes > /tmp/e2e.log 2>&1 || true
           tail -15 /tmp/e2e.log
           grep -q "AUTOMATION: RESULT PASS" /tmp/e2e.log
 
