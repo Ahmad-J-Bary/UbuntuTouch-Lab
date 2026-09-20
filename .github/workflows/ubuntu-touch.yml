@@ -169,8 +169,16 @@ jobs:
           rm -rf /tmp/pk && mkdir -p /tmp/pk && dpkg-deb -x "$CLICK_OUT" /tmp/pk
           dpkg-deb -e "$CLICK_OUT" /tmp/pk/DEBIAN
           file /tmp/pk/mininotes | grep -q "ARM aarch64"
-          for f in mininotes qml/Main.qml qml/CreateNotePage.qml qml/NotesListPage.qml \
-                    mininotes.apparmor mininotes.desktop assets/icons/mininotes.svg; do
+          for f in \
+            mininotes \
+            qml/Main.qml \
+            qml/pages/CreateNotePage.qml \
+            qml/pages/EditNotePage.qml \
+            qml/pages/NotesListPage.qml \
+            qml/theme/UiMetrics.qml \
+            mininotes.apparmor \
+            mininotes.desktop \
+            assets/icons/mininotes.svg; do
             test -f "/tmp/pk/$f"
           done
           python3 -c "import json; json.load(open('/tmp/pk/mininotes.apparmor'))"
