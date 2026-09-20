@@ -76,9 +76,25 @@ jobs:
           cmake -S . -B build/test -DCMAKE_BUILD_TYPE=Release -DMININOTES_BUILD_TESTS=ON
           cmake --build build/test -j2
 
-      - name: Run backend tests (QTest, expected 10/10)
+      - name: Run backend tests (QTest)
         run: |
           ctest --test-dir build/test --output-on-failure
+
+      - name: Verify architecture boundaries
+        run: |
+          set -euo pipefail
+
+          if grep -RInE '#include[[:space:]]*["<].*(QSql|QSqlDatabase|QSqlQuery|sqlite)' src/domain src/application 2>/dev/null; then
+            echo "::error::Domain/Application layers must not depend on SQLite/QSql"
+            exit 1
+          fi
+
+          if grep -RInE 'SqliteNoteRepository|data/sqlite' src/presentation src/application 2>/dev/null; then
+            echo "::error::Presentation/Application layers must not depend on SqliteNoteRepository"
+            exit 1
+          fi
+
+          echo "Architecture boundaries OK"
 
       - name: Build app (host) for QML E2E
         run: |

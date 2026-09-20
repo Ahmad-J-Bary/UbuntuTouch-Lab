@@ -1,15 +1,17 @@
 #include "note_controller.h"
 
+#include "application/note_service.h"
 #include "note_list_model.h"
-#include "domain/inote_repository.h"
 
-#include <QDebug>
 #include <QPointer>
 #include <QTimer>
+#include <QDebug>
 
-NoteController::NoteController(INoteRepository *repository, QObject *parent)
+NoteController::NoteController(
+    NoteService *service,
+    QObject *parent)
     : QObject(parent)
-    , m_repository(repository)
+    , m_service(service)
     , m_notesModel(new NoteListModel(this))
 {
 }
@@ -39,15 +41,33 @@ QAbstractItemModel *NoteController::notesModel() const
     return m_notesModel;
 }
 
-void NoteController::saveNote(const QString &title, const QString &body)
+void NoteController::saveNote(
+    const QString &title,
+    const QString &body)
 {
     if (m_saving || m_deleting) {
-        qInfo().noquote() << QStringLiteral("Save request ignored: a save is already in progress");
+        qInfo().noquote()
+            << QStringLiteral(
+                   "Save request ignored: a database operation is already in progress");
+        return;
+    }
+
+    if (!m_service) {
+        const QString message =
+            QStringLiteral("Application service unavailable");
+
+        setErrorMessage(message);
+        emit saveFailed(message);
         return;
     }
 
     QString validationMessage;
-    if (!isValidInput(title, body, &validationMessage)) {
+
+    if (!m_service->validateNoteInput(
+            title,
+            body,
+            &validationMessage)) {
+
         emit validationFailed(validationMessage);
         return;
     }
@@ -55,72 +75,134 @@ void NoteController::saveNote(const QString &title, const QString &body)
     setErrorMessage(QString());
     setSaving(true);
 
-    QTimer::singleShot(0, this, [this, weakSelf = QPointer<NoteController>(this), title, body]() {
-        if (!weakSelf)
-            return;
-        doSave(title, body);
-    });
+    QTimer::singleShot(
+        0,
+        this,
+        [this,
+         weakSelf = QPointer<NoteController>(this),
+         title,
+         body]() {
+            if (!weakSelf)
+                return;
+
+            doSave(title, body);
+        });
 }
 
-void NoteController::updateNote(int id, const QString &title, const QString &body)
+void NoteController::updateNote(
+    int id,
+    const QString &title,
+    const QString &body)
 {
     if (m_saving || m_deleting) {
-        qInfo().noquote() << QStringLiteral("Update request ignored: a save is already in progress");
+        qInfo().noquote()
+            << QStringLiteral(
+                   "Update request ignored: a database operation is already in progress");
+        return;
+    }
+
+    if (!m_service) {
+        const QString message =
+            QStringLiteral("Application service unavailable");
+
+        setErrorMessage(message);
+        emit updateFailed(message);
         return;
     }
 
     QString validationMessage;
-    if (!isValidInput(title, body, &validationMessage)) {
-        emit validationFailed(validationMessage);
+
+    if (!m_service->validateNoteId(
+            id,
+            &validationMessage)) {
+
+        emit updateFailed(validationMessage);
         return;
     }
 
-    if (id <= 0) {
-        emit updateFailed(QStringLiteral("Invalid note"));
+    if (!m_service->validateNoteInput(
+            title,
+            body,
+            &validationMessage)) {
+
+        emit validationFailed(validationMessage);
         return;
     }
 
     setErrorMessage(QString());
     setSaving(true);
 
-    QTimer::singleShot(0, this, [this, weakSelf = QPointer<NoteController>(this), id, title, body]() {
-        if (!weakSelf)
-            return;
-        doUpdate(id, title, body);
-    });
+    QTimer::singleShot(
+        0,
+        this,
+        [this,
+         weakSelf = QPointer<NoteController>(this),
+         id,
+         title,
+         body]() {
+            if (!weakSelf)
+                return;
+
+            doUpdate(id, title, body);
+        });
 }
 
 void NoteController::deleteNote(int id)
 {
     if (m_saving || m_deleting) {
-        qInfo().noquote() << QStringLiteral("Delete request ignored: another database operation is in progress");
+        qInfo().noquote()
+            << QStringLiteral(
+                   "Delete request ignored: another database operation is in progress");
         return;
     }
 
-    if (id <= 0) {
-        emit deleteFailed(QStringLiteral("Invalid note"));
+    if (!m_service) {
+        const QString message =
+            QStringLiteral("Application service unavailable");
+
+        setErrorMessage(message);
+        emit deleteFailed(message);
+        return;
+    }
+
+    QString validationMessage;
+
+    if (!m_service->validateNoteId(
+            id,
+            &validationMessage)) {
+
+        emit deleteFailed(validationMessage);
         return;
     }
 
     setErrorMessage(QString());
+
     m_deleting = true;
     emit deletingChanged();
 
-    QTimer::singleShot(0, this, [this, weakSelf = QPointer<NoteController>(this), id]() {
-        if (!weakSelf)
-            return;
-        doDelete(id);
-    });
+    QTimer::singleShot(
+        0,
+        this,
+        [this,
+         weakSelf = QPointer<NoteController>(this),
+         id]() {
+            if (!weakSelf)
+                return;
+
+            doDelete(id);
+        });
 }
 
 QVariantMap NoteController::getNote(int id) const
 {
     QVariantMap result;
-    if (!m_repository || id <= 0)
+
+    if (!m_service)
         return result;
 
     Note note;
-    if (!m_repository->findNote(id, &note))
+
+    if (!m_service->findNote(id, &note))
         return result;
 
     result.insert(QStringLiteral("id"), note.id);
@@ -128,104 +210,147 @@ QVariantMap NoteController::getNote(int id) const
     result.insert(QStringLiteral("body"), note.body);
     result.insert(QStringLiteral("createdAt"), note.createdAt);
     result.insert(QStringLiteral("updatedAt"), note.updatedAt);
+
     return result;
 }
 
 void NoteController::refreshNotes()
 {
-    const QList<Note> notes = m_repository ? m_repository->listNotes() : QList<Note>();
+    const QList<Note> notes =
+        m_service
+            ? m_service->listNotes()
+            : QList<Note>();
+
     m_notesModel->setNotes(notes);
     setNoteCount(notes.size());
+
     emit notesChanged();
 }
 
 void NoteController::refreshNoteCount()
 {
-    setNoteCount(m_repository ? m_repository->count() : 0);
+    setNoteCount(
+        m_service
+            ? m_service->count()
+            : 0);
 }
 
-bool NoteController::isValidInput(const QString &title, const QString &body, QString *validationMessage) const
+void NoteController::doSave(
+    const QString &title,
+    const QString &body)
 {
-    if (title.trimmed().isEmpty()) {
-        if (validationMessage)
-            *validationMessage = QStringLiteral("Title is required");
-        return false;
-    }
-    if (body.trimmed().isEmpty()) {
-        if (validationMessage)
-            *validationMessage = QStringLiteral("Content is required");
-        return false;
-    }
-    return true;
-}
+    if (!m_service) {
+        setSaving(false);
 
-void NoteController::doSave(const QString &title, const QString &body)
-{
-    Note createdNote;
-    const bool ok = m_repository && m_repository->createNote(title, body, &createdNote);
+        const QString message =
+            QStringLiteral("Application service unavailable");
 
-    setSaving(false);
-
-    if (ok) {
-        refreshNotes();
-        emit noteSaved();
-    } else {
-        const QString message = m_repository ? m_repository->lastError()
-                                             : QStringLiteral("Failed to save note: database unavailable");
         setErrorMessage(message);
         emit saveFailed(message);
+        return;
     }
-}
 
-void NoteController::doUpdate(int id, const QString &title, const QString &body)
-{
-    Note updatedNote;
-    const bool ok = m_repository && m_repository->updateNote(id, title, body, &updatedNote);
+    const NoteServiceResult result =
+        m_service->createNote(title, body);
 
     setSaving(false);
 
-    if (ok) {
+    if (result.success) {
         refreshNotes();
-        emit noteUpdated();
-    } else {
-        const QString message = m_repository ? m_repository->lastError()
-                                             : QStringLiteral("Failed to update note: database unavailable");
+        emit noteSaved();
+        return;
+    }
+
+    if (result.validationError) {
+        emit validationFailed(result.message);
+        return;
+    }
+
+    setErrorMessage(result.message);
+    emit saveFailed(result.message);
+}
+
+void NoteController::doUpdate(
+    int id,
+    const QString &title,
+    const QString &body)
+{
+    if (!m_service) {
+        setSaving(false);
+
+        const QString message =
+            QStringLiteral("Application service unavailable");
+
         setErrorMessage(message);
         emit updateFailed(message);
+        return;
     }
+
+    const NoteServiceResult result =
+        m_service->updateNote(id, title, body);
+
+    setSaving(false);
+
+    if (result.success) {
+        refreshNotes();
+        emit noteUpdated();
+        return;
+    }
+
+    if (result.validationError) {
+        emit validationFailed(result.message);
+        return;
+    }
+
+    setErrorMessage(result.message);
+    emit updateFailed(result.message);
 }
 
 void NoteController::doDelete(int id)
 {
-    const bool ok = m_repository && m_repository->deleteNote(id);
+    if (!m_service) {
+        m_deleting = false;
+        emit deletingChanged();
+
+        const QString message =
+            QStringLiteral("Application service unavailable");
+
+        setErrorMessage(message);
+        emit deleteFailed(message);
+        return;
+    }
+
+    const NoteServiceResult result =
+        m_service->deleteNote(id);
 
     m_deleting = false;
     emit deletingChanged();
 
-    if (ok) {
+    if (result.success) {
         refreshNotes();
         emit noteDeleted(id);
         return;
     }
 
-    const QString message = m_repository ? m_repository->lastError()
-                                         : QStringLiteral("Failed to delete note: database unavailable");
-    setErrorMessage(message);
-    emit deleteFailed(message);
+    setErrorMessage(result.message);
+    emit deleteFailed(result.message);
 }
 
 void NoteController::setSaving(bool saving)
 {
     if (m_saving == saving)
         return;
+
     m_saving = saving;
     emit savingChanged();
 }
 
-void NoteController::setErrorMessage(const QString &message)
+void NoteController::setErrorMessage(
+    const QString &message)
 {
     if (m_errorMessage == message)
         return;
+
     m_errorMessage = message;
     emit errorMessageChanged();
 }
@@ -234,6 +359,7 @@ void NoteController::setNoteCount(int count)
 {
     if (m_noteCount == count)
         return;
+
     m_noteCount = count;
     emit noteCountChanged();
 }

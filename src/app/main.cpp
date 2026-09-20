@@ -1,5 +1,6 @@
 #include "data/sqlite/database.h"
 #include "data/sqlite/sqlite_note_repository.h"
+#include "application/note_service.h"
 #include "presentation/note_controller.h"
 
 #include <QCoreApplication>
@@ -67,7 +68,8 @@ int main(int argc, char *argv[])
     }
 
     SqliteNoteRepository repository(&database);
-    NoteController controller(&repository);
+    NoteService service(&repository);
+    NoteController controller(&service);
     controller.refreshNotes();
 
     QQmlApplicationEngine engine;
