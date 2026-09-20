@@ -23,8 +23,8 @@ permissions:
 
 env:
   CLICKABLE_VERSION: "8.10.0"
-  SDK_IMAGE: clickable/amd64-ut24.04-2.x-arm64
-  PROVISIONED_IMAGE: mininotes-ut-sdk:24.04-2.x-arm64
+  SDK_IMAGE: clickable/amd64-ut24.04-1.x-arm64
+  PROVISIONED_IMAGE: mininotes-ut-sdk:24.04-1.x-arm64
 
 jobs:
   build:
@@ -99,7 +99,7 @@ jobs:
       - name: Provision Ubuntu Touch SDK image (official base + Qt6 deps + reviewer 2404.2 policy data)
         run: |
           set -euxo pipefail
-          # Official Clickable 24.04-2.x ARM64 builder image, provisioned on the
+          # Official Clickable 24.04-1.x ARM64 builder image, provisioned on the
           # runner (no local artifacts). Dependencies declared in
           # clickable.yaml (dependencies_target) are preinstalled as root, and
           # image setup is skipped later so clickable does not regenerate an
@@ -110,7 +110,7 @@ jobs:
             'apt-get update && DEBIAN_FRONTEND=noninteractive apt-get install -y --no-install-recommends \
                qt6-base-dev qt6-declarative-dev libqt6sql6-sqlite'
           # click-reviewers-tools in the 24.04 archive ships apparmor policy
-          # data only up to 2404.1 while the ubuntu-touch-24.04-2.x framework
+          # data only up to 2404.1 while the ubuntu-touch-24.04-1.x framework
           # uses 2404.2 -> reviewer DATA limitation (the runtime 2404.2 policy
           # exists in the SDK image itself), not a package defect. Add the
           # 2404.2 baseline to the reviewer as a copy of 2404.1 (the declarative
@@ -156,7 +156,7 @@ jobs:
           expected = os.environ["EXPECTED_VERSION"]
           m = json.load(open("/tmp/info.json"))
           assert m["architecture"] == "arm64", m
-          assert m["framework"] == "ubuntu-touch-24.04-2.x", m
+          assert m["framework"] == "ubuntu-touch-24.04-1.x", m
           assert m["name"] == "mininotes", m
           assert m["title"] == "MiniNotes", m
           assert m["version"] == expected, (m["version"], expected)
@@ -175,7 +175,7 @@ jobs:
           done
           python3 -c "import json; json.load(open('/tmp/pk/mininotes.apparmor'))"
           grep -q '"architecture": "arm64"' /tmp/pk/DEBIAN/manifest
-          grep -q '"framework": "ubuntu-touch-24.04-2.x"' /tmp/pk/DEBIAN/manifest
+          grep -q '"framework": "ubuntu-touch-24.04-1.x"' /tmp/pk/DEBIAN/manifest
           grep -q "\"version\": \"${EXPECTED_VERSION}\"" /tmp/pk/DEBIAN/manifest
           echo "package validation OK"
 
@@ -228,7 +228,7 @@ jobs:
 
           ## Target
 
-          - Ubuntu Touch 24.04-2.x
+          - Ubuntu Touch 24.04-1.x
           - ARM64
 
           ## Experimental status

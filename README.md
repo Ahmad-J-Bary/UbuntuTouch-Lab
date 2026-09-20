@@ -12,7 +12,7 @@ The project is developed incrementally: each feature is implemented, tested, and
 | Status | **Experimental / Development** |
 | Platform | Ubuntu Touch |
 | Target architecture | arm64 |
-| Framework | `ubuntu-touch-24.04-2.x` |
+| Framework | `ubuntu-touch-24.04-1.x` |
 | Device used for testing | POCO X3 NFC (`surya`) |
 | UI | QML / Qt Quick Controls |
 | Backend | C++17 |
