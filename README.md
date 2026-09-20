@@ -8,7 +8,7 @@ The main goal of the project is to learn and validate native Ubuntu Touch applic
 
 |                         |                                |
 | ----------------------- | ------------------------------ |
-| Current version         | **0.1.3**                      |
+| Current version         | **0.2.0**                      |
 | Status                  | **Experimental / Development** |
 | Platform                | Ubuntu Touch                   |
 | Target architecture     | arm64                          |
@@ -42,9 +42,9 @@ The project follows these principles:
 
 ---
 
-# Current status — 0.1.3
+# Current status — 0.2.0
 
-Version **0.1.3** is the current working baseline of the project.
+Version **0.2.0** is the current working baseline of the project.
 
 The application successfully:
 
@@ -641,7 +641,7 @@ A feature should not be considered complete until:
   │
   ├── Stability / packaging improvements
   │
-0.1.3
+0.2.0
   │
   ├── Working device baseline
   ├── Create Note
