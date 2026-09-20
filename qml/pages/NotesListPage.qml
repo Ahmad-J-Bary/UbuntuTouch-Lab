@@ -168,19 +168,19 @@ Page {
             deleteEnabled:
                 !noteController.deleting
 
-            onOpenSwipeRequested: {
+            onOpenSwipeRequested: function() {
                 root.openedNoteId = model.noteId
             }
 
-            onCloseSwipeRequested: {
+            onCloseSwipeRequested: function() {
                 root.openedNoteId = -1
             }
 
-            onDeleteRequested: {
+            onDeleteRequested: function(noteId, title) {
                 root.requestDelete(noteId, title)
             }
 
-            onEditRequested: {
+            onEditRequested: function(noteId) {
                 var view = root.StackView.view
 
                 if (view) {
@@ -273,7 +273,7 @@ Page {
 
         busy: noteController.deleting
 
-        onConfirmDelete: {
+        onConfirmDelete: function(noteId) {
             noteController.deleteNote(noteId)
         }
     }

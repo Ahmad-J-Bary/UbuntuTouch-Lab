@@ -2,37 +2,38 @@
 
 MiniNotes is a small, offline-first and privacy-friendly notes application built with Qt, QML and C++.
 
-The project started as a native Ubuntu Touch application and is now being reorganized into a layered, multiplatform architecture with the goal of sharing as much code as possible across Linux desktop, Windows, macOS, Android and iOS, while keeping Ubuntu Touch support.
+The project originally started as a native Ubuntu Touch application and is now being reorganized into a layered, multiplatform architecture so that the same application core and QML UI can be shared across Linux desktop, Windows, macOS, Android and iOS while retaining Ubuntu Touch support.
 
-|                             |                                                       |
-| --------------------------- | ----------------------------------------------------- |
-| Current development version | **0.2.4**                                             |
-| Status                      | **Experimental / Development**                        |
-| Current OpenStore release   | **0.2.4**                                             |
-| OpenStore target            | Ubuntu Touch `24.04-1.x` / Qt 5.15 compatibility path |
-| Development target          | Qt 6                                                  |
-| Architecture                | ARM64 for the current Ubuntu Touch release            |
-| Tested device               | POCO X3 NFC (`surya`)                                 |
-| Frontend                    | QML / Qt Quick Controls                               |
-| Core language               | C++17                                                 |
-| Database                    | SQLite                                                |
-| Build system                | CMake + Clickable                                     |
+| Item | Current state |
+| --- | --- |
+| Development version | **0.2.4** |
+| Status | **Experimental / Development** |
+| Current OpenStore release | **0.2.4** |
+| Ubuntu Touch target | `ubuntu-touch-24.04-1.x` / ARM64 |
+| Development Qt target | **Qt 6** |
+| Frontend | QML / Qt Quick Controls |
+| Core language | C++17 |
+| Database | SQLite |
+| Build system | CMake + CMake Presets |
+| Ubuntu Touch packaging | Clickable |
+| Linux desktop target | **Supported / CI validated** |
 
 ---
 
-## Project goals
+# Project goals
 
 MiniNotes is being developed around a shared application core and platform-specific targets.
 
 The main goals are:
 
-* Keep the domain and application logic independent from a specific platform.
+* Keep domain and application logic independent from a specific platform.
 * Share the maximum amount of C++ and QML code between targets.
 * Keep SQLite access behind a repository abstraction.
 * Keep QML responsible for presentation and user interaction.
-* Support touch-friendly mobile interfaces without creating separate application codebases for every platform.
-* Preserve a native Qt architecture suitable for Linux, Windows, macOS, Android, iOS and Ubuntu Touch.
-* Maintain reliable automated tests while continuously validating the application on a real Ubuntu Touch device.
+* Keep platform-specific APIs behind explicit abstractions.
+* Support touch-friendly mobile interfaces without maintaining separate application codebases.
+* Provide a native Qt architecture suitable for Linux, Windows, macOS, Android, iOS and Ubuntu Touch.
+* Maintain reliable automated tests across the supported targets.
 
 ---
 
@@ -52,13 +53,15 @@ MiniNotes currently provides a complete local note workflow:
 * Confirm permanent deletion.
 * Refresh the note list after save, update or delete.
 * Handle Arabic, English, emoji and special characters.
-* Provide touch-friendly controls and scalable mobile dimensions.
+* Provide touch-friendly controls and scalable UI dimensions.
+* Run on Linux desktop using the same shared application architecture.
+* Run on Ubuntu Touch ARM64 through Clickable.
 
-The current development branch is also being reorganized from the original Ubuntu Touch-focused structure into a layered architecture intended for multiple platforms.
+The current development branch is also being reorganized from the original Ubuntu Touch-focused structure into a layered, multiplatform architecture.
 
 ---
 
-# Current features
+# Features
 
 ## Create Note
 
@@ -118,15 +121,11 @@ Deletion uses a prepared SQL statement:
 DELETE FROM notes WHERE id = ?;
 ```
 
-The confirmation dialog uses separate Delete and Cancel actions and is designed for touch interaction.
-
 ---
 
 # Architecture
 
-The project is currently being migrated from a direct controller-to-SQLite design to a layered architecture.
-
-The current architecture is:
+The project now uses a layered architecture designed to keep platform-specific implementation details isolated.
 
 ```text
                          QML UI
@@ -135,10 +134,13 @@ The current architecture is:
                     NoteController
                            │
                            ▼
-                    INoteRepository
-                           ▲
+                     NoteService
                            │
-                 SqliteNoteRepository
+                           ▼
+                 INoteRepository
+                           │
+                           ▼
+              SqliteNoteRepository
                            │
                            ▼
                         Database
@@ -147,7 +149,99 @@ The current architecture is:
                          SQLite
 ```
 
-## Domain
+Platform-dependent services are separated from the shared application layers:
+
+```text
+                    Application / Domain
+                             │
+                    platform abstractions
+                             │
+                             ▼
+                       QtPlatformPaths
+                             │
+                             ▼
+                     Qt / OS facilities
+```
+
+The intended rule is:
+
+```text
+Domain
+  ↓
+Application
+  ↓
+Abstractions
+  ↓
+Platform / Data implementations
+```
+
+Shared layers must not depend directly on SQLite, Ubuntu Touch-specific paths, or UI layout details.
+
+---
+
+# Source tree
+
+Current C++ structure:
+
+```text
+src/
+├── app/
+│   └── main.cpp
+├── application/
+│   ├── note_service.cpp
+│   └── note_service.h
+├── domain/
+│   ├── note.h
+│   └── inote_repository.h
+├── data/
+│   └── sqlite/
+│       ├── database.cpp
+│       ├── database.h
+│       ├── sqlite_note_repository.cpp
+│       └── sqlite_note_repository.h
+├── presentation/
+│   ├── note_controller.cpp
+│   ├── note_controller.h
+│   ├── note_list_model.cpp
+│   └── note_list_model.h
+└── platform/
+    ├── platform_paths.h
+    └── qt/
+        ├── qt_platform_paths.cpp
+        └── qt_platform_paths.h
+```
+
+Current QML structure:
+
+```text
+qml/
+├── Main.qml
+├── pages/
+│   ├── CreateNotePage.qml
+│   ├── EditNotePage.qml
+│   └── NotesListPage.qml
+├── components/
+│   ├── PageHeader.qml
+│   ├── NoteEditorForm.qml
+│   ├── NoteCard.qml
+│   ├── EmptyNotesState.qml
+│   ├── FloatingActionButton.qml
+│   └── DeleteNoteDialog.qml
+└── theme/
+    └── UiMetrics.qml
+```
+
+`Main.qml` is the QML entry point.
+
+The `pages` directory contains application screens.
+
+The `components` directory contains reusable presentation components shared by the application pages.
+
+`UiMetrics.qml` provides centralized responsive sizing and typography.
+
+---
+
+# Domain layer
 
 Located under:
 
@@ -164,11 +258,13 @@ inote_repository.h
 
 `Note` represents the note data structure.
 
-`INoteRepository` defines the storage contract without depending on a specific storage implementation.
+`INoteRepository` defines the storage contract without depending on SQLite.
 
-The domain layer does not depend on SQLite.
+The domain layer contains no Qt SQL or SQLite implementation details.
 
-## Application
+---
+
+# Application layer
 
 Located under:
 
@@ -176,28 +272,55 @@ Located under:
 src/application/
 ```
 
-This layer is reserved for application-level use cases such as `NoteService`.
+The application layer currently contains:
 
-The application service layer is the next major refactoring step.
+```text
+note_service.h
+note_service.cpp
+```
 
-## Data
+`NoteService` owns application-level note validation and use-case coordination.
+
+The service validates user input before delegating persistence to the repository abstraction.
+
+---
+
+# Data layer
 
 Located under:
 
 ```text
-src/data/
-└── sqlite/
-    ├── database.h
-    ├── database.cpp
-    ├── sqlite_note_repository.h
-    └── sqlite_note_repository.cpp
+src/data/sqlite/
 ```
 
-This layer contains the current SQLite implementation.
+Current files:
 
-`SqliteNoteRepository` implements `INoteRepository` and is responsible for persistence.
+```text
+database.h
+database.cpp
+sqlite_note_repository.h
+sqlite_note_repository.cpp
+```
 
-## Presentation
+`SqliteNoteRepository` implements `INoteRepository` and owns SQLite persistence.
+
+Database writes use prepared statements with bound parameters.
+
+The database schema is:
+
+```sql
+CREATE TABLE IF NOT EXISTS notes (
+    id INTEGER PRIMARY KEY AUTOINCREMENT,
+    title TEXT NOT NULL,
+    body TEXT NOT NULL,
+    created_at TEXT NOT NULL,
+    updated_at TEXT NOT NULL
+);
+```
+
+---
+
+# Presentation layer
 
 Located under:
 
@@ -214,88 +337,35 @@ note_list_model.h
 note_list_model.cpp
 ```
 
-`NoteController` exposes application operations to QML.
+`NoteController` exposes application operations and state to QML.
 
 `NoteListModel` adapts stored notes to Qt's model/view system.
 
-The presentation layer does not depend directly on SQLite.
-
-## Application entry point
-
-Located at:
-
-```text
-src/app/main.cpp
-```
-
-The application entry point acts as the composition root. It creates the concrete SQLite implementation and injects it into the presentation layer.
+The presentation layer does not access SQLite directly.
 
 ---
 
-# QML structure
+# Platform services
 
-The QML code is now organized by responsibility:
-
-```text
-qml/
-├── Main.qml
-├── pages/
-│   ├── CreateNotePage.qml
-│   ├── EditNotePage.qml
-│   └── NotesListPage.qml
-├── theme/
-│   └── UiMetrics.qml
-├── components/
-├── navigation/
-└── platform/
-```
-
-`Main.qml` is the QML entry point.
-
-The page files contain the current application screens.
-
-`UiMetrics.qml` provides centralized UI scaling.
-
-The `components`, `navigation` and `platform` directories are reserved for the next stages of the multiplatform UI refactoring.
-
----
-
-# UI and responsive design
-
-The project uses a centralized QML metrics system:
+Platform-specific path handling is abstracted through:
 
 ```text
-qml/theme/UiMetrics.qml
+src/platform/platform_paths.h
+src/platform/qt/qt_platform_paths.h
+src/platform/qt/qt_platform_paths.cpp
 ```
 
-The goal is to keep:
+The Qt implementation uses platform-aware application data locations rather than hard-coded filesystem paths.
 
-* Margins.
-* Spacing.
-* Typography.
-* Card dimensions.
-* Button sizes.
-* Touch targets.
+The application database is therefore stored in the operating system's application data location.
 
-consistent without duplicating scaling logic across every page.
+For example, on the current Linux development machine the database is located under:
 
-The long-term UI architecture is intended to adapt to phone, tablet and desktop layouts while keeping the core QML components shared.
-
----
-
-# Database schema
-
-```sql
-CREATE TABLE IF NOT EXISTS notes (
-    id INTEGER PRIMARY KEY AUTOINCREMENT,
-    title TEXT NOT NULL,
-    body TEXT NOT NULL,
-    created_at TEXT NOT NULL,
-    updated_at TEXT NOT NULL
-);
+```text
+~/.local/share/mininotes/mininotes.db
 ```
 
-The SQLite database is stored using Qt's platform-aware application data location.
+The path is not hard-coded in the application.
 
 ---
 
@@ -308,6 +378,9 @@ CreateNotePage.qml
        │
        ▼
 NoteController::saveNote()
+       │
+       ▼
+NoteService
        │
        ▼
 INoteRepository
@@ -326,6 +399,9 @@ NotesListPage.qml
        │
        ▼
 NoteController
+       │
+       ▼
+NoteService
        │
        ▼
 INoteRepository
@@ -349,6 +425,9 @@ EditNotePage.qml
 NoteController::updateNote()
        │
        ▼
+NoteService
+       │
+       ▼
 INoteRepository
        │
        ▼
@@ -370,6 +449,9 @@ Delete confirmation
 NoteController::deleteNote()
        │
        ▼
+NoteService
+       │
+       ▼
 INoteRepository
        │
        ▼
@@ -383,9 +465,7 @@ SQLite DELETE
 
 # Validation and persistence
 
-User-facing validation is currently exposed through the presentation layer while the data is persisted through the repository layer.
-
-The system supports:
+The application supports:
 
 ```text
 Arabic
@@ -398,58 +478,251 @@ Multiline text
 UTF-8 content
 ```
 
+Input validation is performed at the application-service boundary.
+
 SQLite writes use prepared statements with bound parameters.
+
+The database is persistent across application restarts.
+
+---
+
+# CMake Presets
+
+Standard host development configurations are provided through:
+
+```text
+CMakePresets.json
+```
+
+Available presets:
+
+```text
+linux-debug
+linux-release
+linux-tests
+linux-e2e
+```
+
+## Debug
+
+```sh
+cmake --preset linux-debug
+cmake --build --preset linux-debug
+```
+
+## Release
+
+```sh
+cmake --preset linux-release
+cmake --build --preset linux-release
+```
+
+## Backend tests
+
+```sh
+cmake --preset linux-tests
+cmake --build --preset linux-tests
+ctest --preset linux-tests
+```
+
+## QML E2E
+
+```sh
+cmake --preset linux-e2e
+cmake --build --preset linux-e2e
+
+QT_QPA_PLATFORM=offscreen \
+QT_QUICK_BACKEND=software \
+MININOTES_E2E_TEST=1 \
+./build/linux-e2e/mininotes
+```
+
+---
+
+# Linux desktop
+
+Linux is the first explicit desktop target of the multiplatform architecture.
+
+The Linux desktop target uses the same shared:
+
+```text
+Domain
+  ↓
+Application
+  ↓
+Repository abstraction
+  ↓
+SQLite
+```
+
+and the same QML UI used by the other targets.
+
+## Local desktop build
+
+```sh
+cmake --preset linux-release
+cmake --build --preset linux-release
+```
+
+Run:
+
+```sh
+./build/linux-release/mininotes
+```
+
+## Linux desktop verification
+
+The current Linux desktop target has been verified with:
+
+* Debug build.
+* Release build.
+* Backend tests.
+* Headless QML E2E.
+* Startup smoke test.
+* SQLite persistence.
+* Arabic / English / emoji input.
+* Existing note workflow.
+* Desktop window execution at the host display resolution.
+
+The automated Linux desktop workflow is:
+
+```text
+.github/workflows/linux-desktop.yml
+```
+
+It currently performs:
+
+```text
+Checkout
+   ↓
+Install Qt 6 dependencies
+   ↓
+Linux Release build
+   ↓
+Backend tests
+   ↓
+QML E2E
+   ↓
+Startup smoke test
+```
+
+The Linux workflow is intentionally separate from the Ubuntu Touch Clickable workflow.
+
+---
+
+# Linux desktop packaging and releases
+
+The current Linux desktop CI validates the application but does not yet publish a Linux binary to GitHub Releases.
+
+The intended release artifact is:
+
+```text
+mininotes-linux-x86_64.tar.gz
+```
+
+A tagged release will eventually contain both:
+
+```text
+mininotes_<version>_arm64.click
+mininotes-linux-x86_64.tar.gz
+```
+
+The Linux release packaging step will be added separately after the Linux desktop target is stabilized.
+
+---
+
+# Ubuntu Touch
+
+The current OpenStore release uses:
+
+```text
+Framework: ubuntu-touch-24.04-1.x
+Qt: Qt 5 compatibility path
+Architecture: arm64
+```
+
+The shared application architecture is intentionally independent from this packaging choice.
+
+Ubuntu Touch packaging is built with Clickable:
+
+```sh
+clickable build --arch arm64
+```
+
+The current GitHub Actions workflow is:
+
+```text
+.github/workflows/ubuntu-touch.yml
+```
+
+It performs:
+
+```text
+Host build and tests
+        ↓
+Architecture boundary checks
+        ↓
+Headless QML E2E
+        ↓
+Provision Ubuntu Touch ARM64 SDK
+        ↓
+Build .click package
+        ↓
+Validate package metadata/content
+        ↓
+Upload artifact
+```
+
+The Ubuntu Touch target is continuously validated for ARM64.
 
 ---
 
 # Testing
 
-The current backend test suite is located at:
+The current backend test suite contains dedicated QTest executables:
 
 ```text
-tests/tst_backend.cpp
+mininotes_backend_test
+mininotes_service_test
+mininotes_platform_test
 ```
 
-It currently covers:
-
-* Valid note creation.
-* Empty title.
-* Empty content.
-* Long UTF-8 text.
-* Special characters.
-* Duplicate save requests.
-* Database failure.
-* Persistence across reopen.
-* Listing notes.
-* Finding notes by ID.
-* Updating notes.
-* Deleting notes.
-
-Build and run the tests:
+Run all tests:
 
 ```sh
-cmake -S . -B build/refactor \
-    -DCMAKE_BUILD_TYPE=Debug \
-    -DMININOTES_BUILD_TESTS=ON
-
-cmake --build build/refactor -j"$(nproc)"
-
-ctest --test-dir build/refactor --output-on-failure
+cmake --preset linux-tests
+cmake --build --preset linux-tests
+ctest --preset linux-tests
 ```
 
-The current refactoring checkpoint passes:
+The current checkpoint has:
 
 ```text
 100% tests passed
 ```
 
+The QML E2E test verifies:
+
+* Validation labels.
+* Successful note creation.
+* Database count increase.
+* Automatic return to the note list.
+* Arabic / English / emoji / special characters.
+
+Example:
+
+```text
+AUTOMATION: validation-labels OK
+AUTOMATION: saved OK
+AUTOMATION: auto-pop-after-save OK
+AUTOMATION: RESULT PASS
+```
+
 ---
 
-# Host development
+# Host development dependencies
 
-The current development environment uses Qt 6.
-
-Install the required development packages on Ubuntu:
+On Ubuntu Linux:
 
 ```sh
 sudo apt install \
@@ -465,83 +738,52 @@ sudo apt install \
     qml6-module-qtqml-workerscript
 ```
 
-Configure:
-
-```sh
-cmake -S . \
-    -B build/refactor \
-    -DCMAKE_BUILD_TYPE=Debug \
-    -DMININOTES_BUILD_TESTS=ON
-```
-
-Build:
-
-```sh
-cmake --build build/refactor -j"$(nproc)"
-```
-
-Test:
-
-```sh
-ctest --test-dir build/refactor --output-on-failure
-```
-
----
-
-# Ubuntu Touch
-
-The currently published OpenStore release uses:
+The project currently uses:
 
 ```text
-Framework: ubuntu-touch-24.04-1.x
-Qt: Qt 5 compatibility path
-Architecture: arm64
-```
-
-This compatibility target exists because the OpenStore review path currently supports the 24.04-1.x AppArmor policy while the 24.04-2.x reviewer path has a known policy-data limitation.
-
-The shared application architecture is intentionally being kept independent from this packaging choice.
-
-Ubuntu Touch development remains an important target and is continuously tested on:
-
-```text
-POCO X3 NFC
-Codename: surya
-Architecture: arm64
-```
-
-Build and install using Clickable:
-
-```sh
-clickable build --arch arm64 --skip-review
-clickable install --arch arm64
-clickable launch --arch arm64 --skip-kill
-```
-
-Runtime logs:
-
-```sh
-clickable log --arch arm64
+C++17
+Qt 6
+CMake 4.x or another compatible modern CMake version
+SQLite
 ```
 
 ---
 
 # Multiplatform roadmap
 
-The project is being reorganized so that most of the source code can be shared between platforms.
-
-Planned targets:
+The project is being reorganized incrementally:
 
 ```text
-Linux desktop
-Windows
-macOS
-Android
-iOS
-Ubuntu Touch
+✅ 1. Git feature branch
+✅ 2. Basic project structure
+✅ 3. C++ source reorganization
+✅ 4. QML source reorganization
+✅ 5. Host build + backend tests
+✅ 6. INoteRepository abstraction
+✅ 7. NoteService
+✅ 8. Platform services
+✅ 9. Reusable QML components
+✅ 10. CMake Presets
+✅ 11. Linux desktop target
+⬜ 12. Windows target
+⬜ 13. macOS target
+⬜ 14. Android target
+⬜ 15. iOS target
+🟨 16. Platform-specific packaging and CI matrix
 ```
 
-The intended structure is:
+Current platform status:
+
+| Target | Status |
+| --- | --- |
+| Ubuntu Touch ARM64 | CI + Click packaging |
+| Linux desktop x86_64 | CI + build/test/E2E |
+| Windows | Planned |
+| macOS | Planned |
+| Android | Planned |
+| iOS | Planned |
+
+The architecture is being designed so that most of the application remains shared:
 
 ```text
 Shared Domain
@@ -566,35 +808,69 @@ Shared QML UI
       └── Ubuntu Touch
 ```
 
-Platform-specific code will be isolated rather than duplicated throughout the shared application logic.
+---
+
+# CI/CD
+
+Current workflows:
+
+```text
+.github/workflows/ubuntu-touch.yml
+.github/workflows/linux-desktop.yml
+```
+
+The Ubuntu Touch workflow validates ARM64 Click packaging.
+
+The Linux Desktop workflow validates the x86_64 desktop target.
+
+GitHub Actions run names are based on the triggering commit message for push events.
+
+Versioned releases currently use semantic version tags:
+
+```text
+vMAJOR.MINOR.PATCH
+```
+
+For example:
+
+```text
+v0.2.4
+```
+
+The release pipeline currently creates the Ubuntu Touch GitHub Release and attaches the `.click` package.
+
+Linux desktop release artifact publication is the next CI/CD extension.
 
 ---
 
-# Current refactoring roadmap
+# Release strategy
 
-The multiplatform architecture is being introduced incrementally:
+The project remains in the `0.x` development series while the architecture and platform targets are still evolving.
+
+A version tag is treated as a release candidate for the current supported targets.
+
+The planned release structure is:
 
 ```text
-✅ Establish Git feature branch
-✅ Create layered project structure
-✅ Reorganize C++ source files
-✅ Reorganize QML pages and theme
-✅ Verify host build
-✅ Verify backend tests
-✅ Introduce INoteRepository
-⬜ Introduce NoteService
-⬜ Separate platform services
-⬜ Extract reusable QML components
-⬜ Add CMake presets
-⬜ Linux desktop target
-⬜ Windows target
-⬜ macOS target
-⬜ Android target
-⬜ iOS target
-⬜ Platform-specific packaging and CI
+Git tag
+   │
+   ├── Ubuntu Touch ARM64 .click
+   │
+   └── Linux desktop x86_64 archive
 ```
 
-The project is intentionally refactored in small, testable stages so that the existing Ubuntu Touch application remains functional throughout the migration.
+Future releases will extend the same model to:
+
+```text
+Windows
+macOS
+Android
+iOS
+```
+
+The project will remain in the `0.x` development series until the shared architecture and initial platform targets are sufficiently stable for a production release.
+
+`1.0.0` will be considered only after the initial shared architecture and platform targets are sufficiently stable.
 
 ---
 
@@ -606,9 +882,10 @@ A change should be considered complete only when:
 2. Existing backend tests pass.
 3. QML references remain valid.
 4. Persistence behavior remains intact.
-5. Ubuntu Touch behavior remains functional where applicable.
+5. Relevant platform behavior remains functional.
 6. New user-facing workflows have appropriate automated coverage.
 7. `README.md` reflects the actual project state.
+8. CI validation passes for the affected targets.
 
 The project keeps one canonical documentation file:
 
@@ -620,12 +897,37 @@ No version-specific README files are maintained.
 
 ---
 
-# Release strategy
+# Current architecture checkpoint
 
-The current OpenStore release and the multiplatform development branch are intentionally separated.
+At the end of the current Linux desktop stage, the architecture is:
 
-The project will remain in the `0.x` development series while the architecture and platform targets are still evolving.
+```text
+                         QML
+                          │
+                          ▼
+                  Presentation layer
+                 NoteController/Model
+                          │
+                          ▼
+                  Application layer
+                     NoteService
+                          │
+                          ▼
+                    Domain layer
+                 Note / Repository API
+                          │
+                          ▼
+                    Data layer
+                SqliteNoteRepository
+                          │
+                          ▼
+                       SQLite
 
-A new minor version will be used for meaningful user-facing milestones rather than for every internal refactoring step.
+Platform concerns are isolated behind:
+             IPlatformPaths
+                    │
+                    ▼
+            QtPlatformPaths
+```
 
-`1.0.0` will be considered only after the shared architecture and the initial platform targets are sufficiently stable for a production release.
+The same core is intended to remain reusable across the upcoming Windows, macOS, Android and iOS targets.
