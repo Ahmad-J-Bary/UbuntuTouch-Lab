@@ -24,6 +24,7 @@ private slots:
     void testListNotes();
     void testFindNote();
     void testUpdateNote();
+    void testDeleteNote();
 
 private:
     int count() const;
@@ -225,6 +226,26 @@ void BackendTest::testUpdateNote()
     QCOMPARE(updated.body, QStringLiteral("Edited body 😀 العربية"));
     QVERIFY(updated.updatedAt >= updated.createdAt);
     Q_UNUSED(oldBody);
+}
+
+void BackendTest::testDeleteNote()
+{
+    const int before = count();
+
+    int id = -1;
+    QVERIFY(fetchLatestNote(&id, nullptr, nullptr, nullptr, nullptr));
+    QVERIFY(id > 0);
+
+    QSignalSpy deletedSpy(m_controller, &NoteController::noteDeleted);
+    m_controller->deleteNote(id);
+
+    QVERIFY2(deletedSpy.wait(3000), "noteDeleted signal was not emitted");
+    QCOMPARE(deletedSpy.count(), 1);
+    QCOMPARE(deletedSpy.takeFirst().at(0).toInt(), id);
+    QCOMPARE(count(), before - 1);
+
+    Note deleted;
+    QVERIFY(!m_repository->findNote(id, &deleted));
 }
 
 QTEST_GUILESS_MAIN(BackendTest)

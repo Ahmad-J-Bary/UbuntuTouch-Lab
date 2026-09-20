@@ -2,264 +2,237 @@
 
 MiniNotes is a small, offline-first, privacy-friendly notes application for Ubuntu Touch.
 
-The project is built as a native Ubuntu Touch application using **QML + Qt 6** for the frontend, **C++17** for the application/backend layer, and **SQLite** for persistent storage.
+The project is built as a native Ubuntu Touch application using **QML + Qt 6** for the frontend, **C++17** for the application/backend layer, and **SQLite** for persistent local storage.
 
-The main goal of the project is to learn and validate native Ubuntu Touch application development incrementally, while keeping the architecture simple, maintainable, testable, and suitable for mobile devices.
+The project is developed incrementally: each feature is implemented, tested, and verified on the real Ubuntu Touch device before moving to the next milestone.
 
-|                         |                                |
-| ----------------------- | ------------------------------ |
-| Current version         | **0.2.0**                      |
-| Status                  | **Experimental / Development** |
-| Platform                | Ubuntu Touch                   |
-| Target architecture     | arm64                          |
-| Framework               | `ubuntu-touch-24.04-2.x`       |
-| Device used for testing | POCO X3 NFC (`surya`)          |
-| UI technology           | QML / Qt 6                     |
-| Backend                 | C++17                          |
-| Database                | SQLite                         |
-| Build system            | CMake + Clickable              |
+| | |
+|---|---|
+| Current version | **0.2.1** |
+| Status | **Experimental / Development** |
+| Platform | Ubuntu Touch |
+| Target architecture | arm64 |
+| Framework | `ubuntu-touch-24.04-2.x` |
+| Device used for testing | POCO X3 NFC (`surya`) |
+| UI | QML / Qt Quick Controls |
+| Backend | C++17 |
+| Database | SQLite |
+| Build system | CMake + Clickable |
 
 ---
 
 ## Project goals
 
-MiniNotes is being developed incrementally.
+MiniNotes focuses on native Ubuntu Touch development with a clean separation between UI and data access.
 
-Each feature should be completed, tested, and verified on the real Ubuntu Touch device before moving to the next major feature.
+Core principles:
 
-The project follows these principles:
-
-* Native Ubuntu Touch technologies.
-* QML for UI only.
-* C++ for application logic and data access.
-* SQLite for persistent local storage.
-* QML must never access SQLite directly.
-* Input must be validated in both UI and C++.
-* Database operations use prepared statements.
-* Touch interaction must be comfortable on mobile screens.
-* Arabic, English, emoji, and special characters must work correctly.
-* Features should be tested on both desktop and the real Ubuntu Touch device.
+- QML is responsible for presentation, navigation, and user interaction.
+- C++ is responsible for application logic and data access.
+- QML never accesses SQLite directly.
+- The C++ layer re-validates user input before writing to the database.
+- Database writes use prepared statements with bound parameters.
+- Touch targets and spacing must be comfortable on mobile screens.
+- Arabic, English, emoji, and special characters must round-trip correctly.
+- Each completed feature is verified on the real Ubuntu Touch device.
 
 ---
 
-# Current status — 0.2.0
+# Current status — 0.2.1
 
-Version **0.2.0** is the current working baseline of the project.
-
-The application successfully:
-
-* Builds for ARM64 using Clickable.
-* Installs on the POCO X3 NFC.
-* Launches correctly through Lomiri.
-* Responds correctly to touch input.
-* Creates notes.
-* Validates empty title/content.
-* Stores notes in SQLite.
-* Preserves UTF-8 content including Arabic and emoji.
-* Persists notes across application restarts.
-* Uses the intended C++ backend architecture.
-
-The current user interface is functional but still requires visual and UX refinement before the project moves to the next major version.
-
----
-
-# Development roadmap
-
-## 0.1.x — Feature completion and UX refinement
-
-The remaining `0.1.x` work is focused on completing the basic note experience and polishing the mobile interface.
-
-### Feature 1 — Create Note
-
-Status: **Implemented**
+Version **0.2.1** extends the basic create/read/update workflow with permanent deletion and a dedicated mobile UX scaling system.
 
 The application currently supports:
 
-* Creating a note.
-* Title validation.
-* Content validation.
-* SQLite persistence.
-* Duplicate-save protection.
-* Error reporting.
-* UTF-8 / Arabic / emoji support.
-* Automatic return to the notes screen after saving.
+- Creating notes.
+- Validating title and content.
+- Persisting notes in SQLite.
+- Browsing stored notes.
+- Opening an existing note.
+- Editing an existing note.
+- Updating `updated_at`.
+- Permanently deleting notes.
+- Swipe-to-reveal deletion from the note list.
+- Confirmation before permanent deletion.
+- Real-time list/model refresh after save, update, or delete.
+- Arabic, English, emoji, and special-character handling.
+- Touch-friendly controls and larger interaction areas.
+- Centralized UI scaling through `qml/UiMetrics.qml`.
+
+The current 0.2.1 UX refinement also keeps the delete-confirmation dialog wider without increasing the scale of the controls inside it.
 
 ---
 
-### Feature 2 — Browse and Edit Notes
+# Features
 
-Status: **Next 0.1.x feature**
+## Feature 1 — Create Note
 
-The notes screen should display the actual stored notes instead of only showing a counter such as:
+Status: **Implemented**
+
+The create-note workflow supports:
+
+- Title validation.
+- Content validation.
+- Prepared SQLite INSERT.
+- Duplicate-save protection.
+- Save-state feedback.
+- UTF-8 content.
+- Automatic return to the note list after a successful save.
+
+## Feature 2 — Browse and Edit Notes
+
+Status: **Implemented**
+
+The note list displays stored notes using a Qt model exposed by the C++ controller.
+
+Each note shows:
+
+- Title.
+- Content preview.
+- Last-updated timestamp.
+- A large touch-friendly card.
+
+Tapping a note opens `EditNotePage.qml`, where the user can edit the title and content and save the changes.
+
+## Feature 3 — Delete Note
+
+Status: **Implemented**
+
+A note can be deleted by swiping it horizontally to reveal the delete action.
+
+The flow is:
 
 ```text
-2 notes stored
+Note card
+   │
+   │ swipe
+   ▼
+Reveal Delete action
+   │
+   ▼
+Delete note?
+   │
+   ├── Delete   → permanent SQLite DELETE
+   │
+   └── Cancel   → close dialog
 ```
 
-The planned behavior is:
+Deletion is implemented in C++ using a prepared statement:
 
-```text
-Notes List
-    │
-    ├── Note
-    ├── Note
-    ├── Note
-    │
-    └── + New Note
+```sql
+DELETE FROM notes WHERE id = ?;
 ```
 
-Each note should provide:
+The delete confirmation dialog uses a vertical action layout:
 
-* Title.
-* Short preview of the content.
-* Useful timestamp information.
-* A large touch-friendly area.
+1. **Delete** — red background, white text.
+2. **Cancel** — gray background, white text.
 
-Selecting a note should open a dedicated note page where the user can:
-
-* Read the complete note.
-* Edit the title.
-* Edit the content.
-* Save the changes.
-* Return to the notes list.
-
-The existing:
-
-```text
-created_at
-updated_at
-```
-
-database fields will be used to preserve creation and modification timestamps.
+The dialog surface is intentionally wider with fixed padding so the dialog itself has more breathing room without scaling up the controls inside it.
 
 ---
 
-## 0.1.x — Mobile UX refinement
+# UI/UX system
 
-Before starting `0.2.0`, the interface will receive a dedicated UX pass.
+The project uses a centralized QML metrics object:
 
-The goal is not simply to increase font sizes, but to make the complete interface more comfortable on the POCO X3 NFC and similar touchscreen devices.
+```text
+qml/UiMetrics.qml
+```
 
-### UI improvements
+It provides a common scale for:
 
-The following areas will be reviewed and adjusted:
+- Margins.
+- Header sizes.
+- Card sizes.
+- Buttons.
+- Touch targets.
+- Typography.
+- Spacing.
 
-* Header height.
-* Header title size.
-* Back button size.
-* Back button touch area.
-* Screen titles.
-* Text field height.
-* Text field font size.
-* Text area height.
-* Input padding.
-* Labels.
-* Save button size.
-* Save button touch area.
-* Floating `+` button size.
-* Floating `+` touch area.
-* Note card size.
-* Note title typography.
-* Note preview typography.
-* Timestamps.
-* Vertical and horizontal spacing.
-* Bottom safe space around floating controls.
-* Overall visual hierarchy.
-* Scrolling behavior.
-* Touch feedback.
+The goal is to avoid independently tuning dozens of hard-coded dimensions across pages.
 
-The target is a comfortable mobile UI rather than a desktop UI scaled down to fit a phone.
-
----
-
-# Planned 0.2.0
-
-`0.2.0` will start only after the basic note workflow and the `0.1.x` UX refinement are complete.
-
-The exact feature set for `0.2.0` will be defined after the current `0.1.x` work is tested on the real device.
-
-Possible future areas include:
-
-* Delete notes.
-* Confirmation dialogs.
-* Search.
-* Better note browsing.
-* Sorting.
-* Empty-state improvements.
-* More complete note metadata handling.
-* Additional UI/UX improvements.
-* Further mobile-specific interaction improvements.
-
-The final `0.2.0` scope should be decided based on the actual behavior of the completed `0.1.x` release rather than being implemented prematurely.
+For the delete-confirmation dialog, the width and surface padding are adjusted independently from the control typography so that only the dialog itself becomes more spacious.
 
 ---
 
 # Architecture
 
 ```text
-                    QML UI
-                       │
-                       │ signals / properties / Q_INVOKABLE
-                       ▼
-                NoteController
-                       │
-                       ▼
-                NoteRepository
-                       │
-                       ▼
-                    Database
-                       │
-                       ▼
-                    SQLite
+                         QML UI
+                           │
+                           │ properties / signals / Q_INVOKABLE
+                           ▼
+                    NoteController
+                           │
+                           ├──────────────► NoteListModel
+                           │
+                           ▼
+                    NoteRepository
+                           │
+                           ▼
+                        Database
+                           │
+                           ▼
+                         SQLite
 ```
 
-### Responsibilities
-
-#### QML
-
-Responsible only for:
-
-* Presentation.
-* Navigation.
-* User interaction.
-* Validation feedback.
-* Displaying model data.
-
-QML must not execute SQL or access the SQLite database directly.
-
-#### NoteController
+### QML
 
 Responsible for:
 
-* Exposing application operations to QML.
-* Managing saving/updating state.
-* Exposing note data to the UI.
-* Emitting success/failure signals.
-* Protecting against duplicate operations.
+- Presentation.
+- Navigation.
+- User interaction.
+- Validation feedback.
+- Displaying model data.
+- Swipe gestures and confirmation UI.
 
-#### NoteRepository
+QML does not execute SQL.
 
-Responsible for:
+### NoteController
 
-* Validation backstop.
-* SQLite operations.
-* Prepared statements.
-* Creating, reading, updating, and later deleting notes.
+Responsible for exposing application operations to QML, managing operation state, refreshing data, and emitting success/failure signals.
 
-#### Database
+Current public operations include:
 
-Responsible for:
+```text
+saveNote()
+updateNote()
+getNote()
+refreshNotes()
+refreshNoteCount()
+deleteNote()
+```
 
-* SQLite connection.
-* Database initialization.
-* Schema creation.
-* Database lifecycle.
+### NoteRepository
+
+Responsible for all SQLite operations:
+
+```text
+createNote()
+updateNote()
+deleteNote()
+findNote()
+listNotes()
+count()
+```
+
+All writes use prepared statements.
+
+### NoteListModel
+
+`QAbstractListModel` exposes stored notes to QML using model roles for:
+
+- ID.
+- Title.
+- Body.
+- Created timestamp.
+- Updated timestamp.
 
 ---
 
 # Database schema
-
-Current schema:
 
 ```sql
 CREATE TABLE IF NOT EXISTS notes (
@@ -271,140 +244,130 @@ CREATE TABLE IF NOT EXISTS notes (
 );
 ```
 
-The schema already supports the basic create/read/update workflow planned for the `0.1.x` series.
+The schema supports the current create/read/update/delete workflow without requiring additional tables.
 
-All database writes should use prepared statements and bound parameters.
+The SQLite database is stored under Qt's `QStandardPaths::AppDataLocation`.
 
 ---
 
 # Data flow
 
-Creating a note:
+### Create
 
 ```text
-User
-  │
-  ▼
 CreateNotePage.qml
-  │
-  ▼
+       │
+       ▼
 NoteController::saveNote()
-  │
-  ▼
+       │
+       ▼
 NoteRepository::createNote()
-  │
-  ▼
+       │
+       ▼
 SQLite INSERT
-  │
-  ▼
+       │
+       ▼
 noteSaved()
-  │
-  ▼
-QML returns to Notes List
+       │
+       ▼
+Notes list refresh
 ```
 
-Reading a note:
+### Read
 
 ```text
-Notes List
-  │
-  ▼
-NoteController
-  │
-  ▼
-NoteRepository
-  │
-  ▼
-SQLite SELECT
-  │
-  ▼
-QML displays notes
+NotesListPage.qml
+       │
+       ▼
+NoteController::refreshNotes()
+       │
+       ▼
+NoteRepository::listNotes()
+       │
+       ▼
+NoteListModel
+       │
+       ▼
+QML ListView
 ```
 
-Updating a note:
+### Update
 
 ```text
 EditNotePage.qml
-  │
-  ▼
-NoteController
-  │
-  ▼
+       │
+       ▼
+NoteController::updateNote()
+       │
+       ▼
 NoteRepository::updateNote()
-  │
-  ▼
+       │
+       ▼
 SQLite UPDATE
-  │
-  ▼
-updated_at changed
-  │
-  ▼
-QML refreshes notes
+       │
+       ▼
+noteUpdated()
+       │
+       ▼
+Notes list refresh
+```
+
+### Delete
+
+```text
+NotesListPage.qml
+       │
+       ▼
+swipe → Delete
+       │
+       ▼
+confirmation dialog
+       │
+       ▼
+NoteController::deleteNote()
+       │
+       ▼
+NoteRepository::deleteNote()
+       │
+       ▼
+SQLite DELETE
+       │
+       ▼
+noteDeleted()
+       │
+       ▼
+Notes list refresh
 ```
 
 ---
 
-# Validation
+# Validation and persistence
 
-Validation exists at multiple layers.
+Validation is intentionally multi-layered.
 
-The UI provides immediate feedback such as:
+The QML layer provides immediate user feedback, while the C++ layer performs the final validation before a database operation.
+
+Examples:
 
 ```text
 Title is required
 Content is required
 ```
 
-The C++ repository validates the same conditions again before performing database operations.
-
-This ensures that the backend does not depend on QML validation for data integrity.
-
----
-
-# UTF-8 and international text
-
-MiniNotes must correctly support:
-
-* Arabic.
-* English.
-* Mixed Arabic and English.
-* Emoji.
-* Quotes.
-* Backslashes.
-* Semicolons.
-* Newlines.
-* Long text.
-
-Example:
-
-```text
-Hello Ubuntu Touch
-العربية
-مرحبا بالعالم
-😀
-' " \ ;
-```
-
-These values must survive the complete path:
-
-```text
-QML → C++ → SQLite → C++ → QML
-```
-
-without corruption.
+UTF-8 data is handled end-to-end, including Arabic, emoji, quotes, backslashes, semicolons, and multiline content.
 
 ---
 
 # Requirements
 
-* Ubuntu Touch 24.04+
-* Qt 6
-* CMake >= 3.16
-* Clickable >= 8.8
-* Docker or Podman for Clickable builds
-* ARM64 Ubuntu Touch device for on-device testing
+- Ubuntu Touch 24.04+
+- Qt 6 runtime
+- CMake >= 3.16
+- Clickable >= 8.8
+- Docker or Podman for Clickable builds
+- ARM64 Ubuntu Touch device for on-device testing
 
-The current development device is:
+Current device:
 
 ```text
 POCO X3 NFC
@@ -423,28 +386,11 @@ cmake --build build -j4
 ./build/mininotes
 ```
 
-The QML files are copied next to the executable during the build.
-
-The SQLite database is stored in Qt's `AppDataLocation`.
-
 ---
 
 # Backend tests
 
-The backend test suite covers the important data-layer scenarios, including:
-
-* Valid note creation.
-* Empty title.
-* Empty body.
-* Long UTF-8 text.
-* Arabic and English content.
-* Emoji.
-* Special characters.
-* Duplicate save requests.
-* Database failure.
-* Persistence across reopen.
-
-Build and run:
+Build and run the QtTest suite:
 
 ```sh
 cmake -S . -B build -DMININOTES_BUILD_TESTS=ON
@@ -452,13 +398,24 @@ cmake --build build -j4
 ctest --test-dir build --output-on-failure
 ```
 
-The current baseline expects the existing backend suite to pass completely before a release is considered stable.
+The current suite covers:
+
+- Valid note creation.
+- Empty title.
+- Empty body.
+- Long UTF-8 content.
+- Special characters.
+- Duplicate save requests.
+- Database failure.
+- Persistence across reopen.
+- Listing notes.
+- Finding notes by ID.
+- Updating notes.
+- Deleting notes.
 
 ---
 
 # Headless UI test
-
-The project includes a headless QML/E2E test.
 
 Run:
 
@@ -468,108 +425,35 @@ MININOTES_E2E_TEST=1 \
 ./build/mininotes
 ```
 
-Expected result:
+Expected result for the existing automation path:
 
 ```text
 AUTOMATION: RESULT PASS
 ```
 
-The E2E test should be extended whenever important user-facing behavior is added.
+The E2E automation should be extended whenever a new critical user-facing workflow is introduced.
 
 ---
 
 # Build for Ubuntu Touch
 
-Build:
-
 ```sh
 clickable build --arch arm64 --skip-review
-```
-
-Install on the connected device:
-
-```sh
 clickable install --arch arm64
-```
-
-Launch:
-
-```sh
 clickable launch --arch arm64 --skip-kill
 ```
 
-View application logs:
+View runtime logs:
 
 ```sh
 clickable log --arch arm64
 ```
 
-For runtime debugging, the application logs should be inspected before making speculative code changes.
+When debugging a launch/runtime issue, inspect the application log before making unrelated UI or backend changes.
 
 ---
 
-# Packaging
-
-The Click package contains:
-
-```text
-mininotes
-qml/
-manifest.json
-mininotes.apparmor
-mininotes.desktop
-assets/icons/mininotes.svg
-```
-
-Application metadata is defined through:
-
-```text
-manifest.json.in
-```
-
-The AppArmor profile is:
-
-```text
-mininotes.apparmor
-```
-
-The desktop entry is:
-
-```text
-mininotes.desktop
-```
-
----
-
-# Important Ubuntu Touch development notes
-
-The application is designed specifically for Ubuntu Touch and should be tested through the actual Lomiri environment.
-
-When an application fails to launch, the preferred debugging sequence is:
-
-```text
-Build
-  ↓
-Install
-  ↓
-Launch
-  ↓
-clickable log
-  ↓
-Identify the actual runtime error
-  ↓
-Fix the smallest responsible layer
-  ↓
-Rebuild
-  ↓
-Retest
-```
-
-The goal is to avoid changing QML, C++, packaging, and database code simultaneously when only one layer is responsible for the failure.
-
----
-
-# Project structure
+# Package structure
 
 ```text
 MiniNotes/
@@ -582,13 +466,16 @@ MiniNotes/
 │   ├── noterepository.cpp
 │   ├── notecontroller.h
 │   ├── notecontroller.cpp
+│   ├── notelistmodel.h
+│   ├── notelistmodel.cpp
 │   └── main.cpp
 │
 ├── qml/
 │   ├── Main.qml
 │   ├── NotesListPage.qml
 │   ├── CreateNotePage.qml
-│   └── EditNotePage.qml
+│   ├── EditNotePage.qml
+│   └── UiMetrics.qml
 │
 ├── tests/
 │   └── tst_backend.cpp
@@ -605,104 +492,79 @@ MiniNotes/
 └── README.md
 ```
 
-The exact file list may grow as new features are introduced.
-
 ---
 
-# Development policy
+# Development and release policy
 
-The project is intentionally developed in small, verifiable steps.
-
-A feature should not be considered complete until:
+A feature is considered complete only when:
 
 1. The backend implementation works.
-2. The UI implementation works.
+2. The QML workflow works.
 3. Validation is covered.
 4. Persistent storage is verified.
-5. The feature works with real touch interaction.
+5. Touch interaction works correctly.
 6. The feature is tested on the real Ubuntu Touch device.
 7. Runtime logs show no unexpected application errors.
-8. The README reflects the actual project state.
+8. `README.md` reflects the actual project state.
+
+The project intentionally keeps one canonical documentation file: **`README.md`**.
+
+No version-specific README files are required.
 
 ---
 
 # Release progression
 
 ```text
-0.1.0
-  │
-  ├── Project foundation
-  │
-0.1.1
-  │
-  ├── Initial Create Note implementation
-  │
-0.1.2
-  │
-  ├── Stability / packaging improvements
-  │
-0.2.0
-  │
-  ├── Working device baseline
-  ├── Create Note
-  ├── SQLite persistence
-  └── Touch interaction
-  │
-  ▼
 0.1.x
   │
-  ├── Browse stored notes
-  ├── Open notes
-  ├── Edit notes
-  ├── UX / responsive mobile refinement
-  ├── Larger touch targets
-  ├── Typography and spacing improvements
-  └── Real-device verification
+  ├── Create Note
+  ├── SQLite persistence
+  ├── Browse notes
+  └── Edit notes
   │
   ▼
 0.2.0
   │
-  └── Next feature milestone
+  ├── Stable browse/read/edit workflow
+  └── Mobile UI scaling foundation
+  │
+  ▼
+0.2.1
+  │
+  ├── Swipe-to-reveal Delete
+  ├── Permanent SQLite deletion
+  ├── Delete confirmation
+  ├── Centralized UiMetrics scaling
+  ├── Larger touch targets
+  └── Delete dialog UX refinement
 ```
 
-The transition to **0.2.0** should happen only after the remaining `0.1.x` work is completed and verified on the real device.
+The application remains on **0.2.1** for these UI refinements. The version should not be incremented merely for the delete-dialog styling changes.
 
 ---
 
-# Current development status
+# Current 0.2.1 UX behavior
 
-### Completed
-
-* Native Qt/QML application foundation.
-* C++ backend.
-* SQLite integration.
-* Database schema.
-* Create Note.
-* Input validation.
-* Prepared statements.
-* UTF-8 / Arabic / emoji handling.
-* Persistence.
-* Duplicate-save protection.
-* ARM64 Clickable build.
-* Real-device installation.
-* Real-device launch.
-* Touch interaction.
-
-### Current 0.1.x work
-
-* Browsing stored notes.
-* Opening a stored note.
-* Editing notes.
-* Updating `updated_at`.
-* Mobile UX refinement.
-* Larger controls and touch targets.
-* Improved typography and spacing.
-* Better note-list presentation.
-
-### Next major milestone
+The delete confirmation dialog is intentionally designed as a compact mobile confirmation surface:
 
 ```text
-0.2.0
+┌─────────────────────────────────┐
+│ Delete note?                    │
+│                                 │
+│ Note title                      │
+│                                 │
+│ This note will be permanently   │
+│ deleted.                        │
+│                                 │
+│ ┌─────────────────────────────┐ │
+│ │            Delete           │ │  red / white
+│ └─────────────────────────────┘ │
+│                                 │
+│ ┌─────────────────────────────┐ │
+│ │            Cancel           │ │  gray / white
+│ └─────────────────────────────┘ │
+└─────────────────────────────────┘
 ```
 
-The exact contents of `0.2.0` will be finalized after the current `0.1.x` work is completed and validated.
+Only the dialog surface width/padding is enlarged; the internal control sizing remains governed by the existing 0.2.1 UI metrics.

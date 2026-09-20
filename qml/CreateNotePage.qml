@@ -5,6 +5,8 @@ import QtQuick.Layouts 1.15
 Page {
     id: root
 
+    UiMetrics { id: ui }
+
     readonly property color headerBackground: "#2C001E"
     readonly property color headerForeground: "#FFFFFF"
     readonly property color headerPress: "#4A1731"
@@ -13,9 +15,9 @@ Page {
     readonly property color accent: "#77216F"
     readonly property color errorColor: "#C1001E"
 
-    readonly property real pageMargin: 24
-    readonly property real headerHeight: 78
-    readonly property real controlHeight: 78
+    readonly property real pageMargin: ui.size(24, width, height)
+    readonly property real headerHeight: ui.size(78, width, height)
+    readonly property real controlHeight: ui.size(78, width, height)
 
     background: Rectangle { color: "#F5F5F5" }
 
@@ -31,12 +33,12 @@ Page {
 
             Item {
                 id: backArea
-                width: 88
+                width: ui.size(88, root.width, root.height)
                 height: parent.height
 
                 Rectangle {
                     anchors.fill: parent
-                    radius: 12
+                    radius: ui.size(12, root.width, root.height)
                     color: backMouse.pressed ? root.headerPress : "transparent"
                 }
 
@@ -44,7 +46,7 @@ Page {
                     anchors.centerIn: parent
                     text: "←"
                     color: root.headerForeground
-                    font.pointSize: 38
+                    font.pointSize: ui.font(38, root.width, root.height)
                     font.weight: Font.DemiBold
                 }
 
@@ -69,7 +71,7 @@ Page {
                 anchors.verticalCenter: parent.verticalCenter
                 text: "New Note"
                 color: root.headerForeground
-                font.pointSize: 25
+                font.pointSize: ui.font(25, root.width, root.height)
                 font.weight: Font.DemiBold
                 elide: Text.ElideRight
             }
@@ -85,14 +87,14 @@ Page {
             ColumnLayout {
                 id: form
                 width: formScroll.availableWidth
-                spacing: 14
+                spacing: ui.size(14, root.width, root.height)
 
-                Item { Layout.fillWidth: true; Layout.preferredHeight: 12 }
+                Item { Layout.fillWidth: true; Layout.preferredHeight: ui.size(12, root.width, root.height) }
 
                 Text {
                     text: "Title"
                     color: root.textSecondary
-                    font.pointSize: 18
+                    font.pointSize: ui.font(18, root.width, root.height)
                     font.weight: Font.DemiBold
                     Layout.fillWidth: true
                     Layout.leftMargin: root.pageMargin
@@ -107,12 +109,12 @@ Page {
                     Layout.leftMargin: root.pageMargin
                     Layout.rightMargin: root.pageMargin
                     placeholderText: "Note title"
-                    font.pointSize: 20
+                    font.pointSize: ui.font(20, root.width, root.height)
                     color: root.textPrimary
-                    padding: 18
+                    padding: ui.size(18, root.width, root.height)
                     verticalAlignment: TextInput.AlignVCenter
                     background: Rectangle {
-                        radius: 10
+                        radius: ui.size(10, root.width, root.height)
                         color: "#FFFFFF"
                         border.color: titleField.activeFocus ? root.accent : "#C9C9C9"
                         border.width: titleField.activeFocus ? 2 : 1
@@ -128,7 +130,7 @@ Page {
                     visible: false
                     text: ""
                     color: root.errorColor
-                    font.pointSize: 15
+                    font.pointSize: ui.font(15, root.width, root.height)
                     wrapMode: Text.WordWrap
                     Layout.fillWidth: true
                     Layout.leftMargin: root.pageMargin
@@ -138,28 +140,28 @@ Page {
                 Text {
                     text: "Content"
                     color: root.textSecondary
-                    font.pointSize: 18
+                    font.pointSize: ui.font(18, root.width, root.height)
                     font.weight: Font.DemiBold
                     Layout.fillWidth: true
                     Layout.leftMargin: root.pageMargin
                     Layout.rightMargin: root.pageMargin
-                    Layout.topMargin: 8
+                    Layout.topMargin: ui.size(8, root.width, root.height)
                 }
 
                 TextArea {
                     id: bodyField
                     objectName: "bodyField"
                     Layout.fillWidth: true
-                    Layout.preferredHeight: Math.max(260, Math.min(root.height * 0.42, 400))
+                    Layout.preferredHeight: Math.max(ui.size(260, root.width, root.height), Math.min(root.height * 0.42, ui.size(400, root.width, root.height)))
                     Layout.leftMargin: root.pageMargin
                     Layout.rightMargin: root.pageMargin
                     placeholderText: "Write your note..."
-                    font.pointSize: 20
+                    font.pointSize: ui.font(20, root.width, root.height)
                     color: root.textPrimary
-                    padding: 17
+                    padding: ui.size(17, root.width, root.height)
                     wrapMode: Text.Wrap
                     background: Rectangle {
-                        radius: 10
+                        radius: ui.size(10, root.width, root.height)
                         color: "#FFFFFF"
                         border.color: bodyField.activeFocus ? root.accent : "#C9C9C9"
                         border.width: bodyField.activeFocus ? 2 : 1
@@ -173,7 +175,7 @@ Page {
                     visible: false
                     text: ""
                     color: root.errorColor
-                    font.pointSize: 15
+                    font.pointSize: ui.font(15, root.width, root.height)
                     wrapMode: Text.WordWrap
                     Layout.fillWidth: true
                     Layout.leftMargin: root.pageMargin
@@ -185,10 +187,10 @@ Page {
                     objectName: "createPageErrorBox"
                     visible: false
                     Layout.fillWidth: true
-                    Layout.preferredHeight: saveErrorLabel.implicitHeight + 30
+                    Layout.preferredHeight: saveErrorLabel.implicitHeight + ui.size(30, root.width, root.height)
                     Layout.leftMargin: root.pageMargin
                     Layout.rightMargin: root.pageMargin
-                    radius: 10
+                    radius: ui.size(10, root.width, root.height)
                     color: "#FDECEA"
                     border.color: "#E7C2C0"
                     border.width: 1
@@ -196,10 +198,10 @@ Page {
                     Text {
                         id: saveErrorLabel
                         anchors.fill: parent
-                        anchors.margins: 13
+                        anchors.margins: ui.size(13, root.width, root.height)
                         text: ""
                         color: root.errorColor
-                        font.pointSize: 15
+                        font.pointSize: ui.font(15, root.width, root.height)
                         wrapMode: Text.WordWrap
                         verticalAlignment: Text.AlignVCenter
                     }
@@ -208,18 +210,18 @@ Page {
                 Rectangle {
                     id: saveButton
                     Layout.fillWidth: true
-                    Layout.preferredHeight: 74
+                    Layout.preferredHeight: ui.size(74, root.width, root.height)
                     Layout.leftMargin: root.pageMargin
                     Layout.rightMargin: root.pageMargin
-                    Layout.topMargin: 8
-                    radius: 12
+                    Layout.topMargin: ui.size(8, root.width, root.height)
+                    radius: ui.size(12, root.width, root.height)
                     color: saveTap.pressed ? "#5E2750" : root.accent
 
                     Text {
                         anchors.centerIn: parent
                         text: noteController.saving ? "Saving..." : "Save"
                         color: "#FFFFFF"
-                        font.pointSize: 20
+                        font.pointSize: ui.font(20, root.width, root.height)
                         font.weight: Font.DemiBold
                     }
 
@@ -230,7 +232,7 @@ Page {
                     }
                 }
 
-                Item { Layout.fillWidth: true; Layout.preferredHeight: root.pageMargin + 8 }
+                Item { Layout.fillWidth: true; Layout.preferredHeight: root.pageMargin + ui.size(8, root.width, root.height) }
             }
         }
     }

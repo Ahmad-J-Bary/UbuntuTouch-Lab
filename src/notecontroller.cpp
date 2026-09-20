@@ -19,6 +19,11 @@ bool NoteController::isSaving() const
     return m_saving;
 }
 
+bool NoteController::isDeleting() const
+{
+    return m_deleting;
+}
+
 QString NoteController::errorMessage() const
 {
     return m_errorMessage;
@@ -36,7 +41,7 @@ QAbstractItemModel *NoteController::notesModel() const
 
 void NoteController::saveNote(const QString &title, const QString &body)
 {
-    if (m_saving) {
+    if (m_saving || m_deleting) {
         qInfo().noquote() << QStringLiteral("Save request ignored: a save is already in progress");
         return;
     }
@@ -59,7 +64,7 @@ void NoteController::saveNote(const QString &title, const QString &body)
 
 void NoteController::updateNote(int id, const QString &title, const QString &body)
 {
-    if (m_saving) {
+    if (m_saving || m_deleting) {
         qInfo().noquote() << QStringLiteral("Update request ignored: a save is already in progress");
         return;
     }
@@ -82,6 +87,29 @@ void NoteController::updateNote(int id, const QString &title, const QString &bod
         if (!weakSelf)
             return;
         doUpdate(id, title, body);
+    });
+}
+
+void NoteController::deleteNote(int id)
+{
+    if (m_saving || m_deleting) {
+        qInfo().noquote() << QStringLiteral("Delete request ignored: another database operation is in progress");
+        return;
+    }
+
+    if (id <= 0) {
+        emit deleteFailed(QStringLiteral("Invalid note"));
+        return;
+    }
+
+    setErrorMessage(QString());
+    m_deleting = true;
+    emit deletingChanged();
+
+    QTimer::singleShot(0, this, [this, weakSelf = QPointer<NoteController>(this), id]() {
+        if (!weakSelf)
+            return;
+        doDelete(id);
     });
 }
 
@@ -165,6 +193,25 @@ void NoteController::doUpdate(int id, const QString &title, const QString &body)
         setErrorMessage(message);
         emit updateFailed(message);
     }
+}
+
+void NoteController::doDelete(int id)
+{
+    const bool ok = m_repository && m_repository->deleteNote(id);
+
+    m_deleting = false;
+    emit deletingChanged();
+
+    if (ok) {
+        refreshNotes();
+        emit noteDeleted(id);
+        return;
+    }
+
+    const QString message = m_repository ? m_repository->lastError()
+                                         : QStringLiteral("Failed to delete note: database unavailable");
+    setErrorMessage(message);
+    emit deleteFailed(message);
 }
 
 void NoteController::setSaving(bool saving)

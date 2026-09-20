@@ -125,6 +125,39 @@ bool NoteRepository::updateNote(int id, const QString &title, const QString &bod
     return true;
 }
 
+bool NoteRepository::deleteNote(int id)
+{
+    m_lastError.clear();
+
+    if (id <= 0) {
+        m_lastError = QObject::tr("Invalid note");
+        return false;
+    }
+
+    if (!m_database || !m_database->isOpen()) {
+        m_lastError = QObject::tr("Database is not open");
+        qCritical().noquote() << m_lastError;
+        return false;
+    }
+
+    QSqlQuery query(m_database->connection());
+    query.prepare(QStringLiteral("DELETE FROM notes WHERE id = ?"));
+    query.addBindValue(id);
+
+    if (!query.exec()) {
+        m_lastError = QObject::tr("Failed to delete note: %1").arg(query.lastError().text());
+        qCritical().noquote() << m_lastError;
+        return false;
+    }
+
+    if (query.numRowsAffected() != 1) {
+        m_lastError = QObject::tr("Note was not found");
+        return false;
+    }
+
+    return true;
+}
+
 bool NoteRepository::findNote(int id, Note *note) const
 {
     m_lastError.clear();
