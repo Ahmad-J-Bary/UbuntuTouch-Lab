@@ -1,5 +1,6 @@
-import QtQuick 2.12
-import QtQuick.Controls 2.12
+import QtQuick
+import QtQuick.Controls
+import QtQuick.Layouts
 
 Page {
     id: root
@@ -7,6 +8,16 @@ Page {
     readonly property color headerBackground: "#2C001E"
     readonly property color headerForeground: "#FFFFFF"
     readonly property color accent: "#77216F"
+    readonly property color accentPressed: "#5E2750"
+
+    // Mobile-first dimensions in Qt device-independent coordinates.
+    readonly property real pageMargin:
+        Math.max(20, Math.min(width * 0.055, 28))
+
+    readonly property real headerHeight: 64
+
+    readonly property real fabVisualSize: 96
+    readonly property real fabHitSize: 112
 
     background: Rectangle {
         color: "#F5F5F5"
@@ -14,82 +25,163 @@ Page {
 
     Rectangle {
         id: header
+
         anchors.left: parent.left
         anchors.right: parent.right
         anchors.top: parent.top
-        height: Math.max(56, Math.min(root.width * 0.08, 72))
+
+        height: root.headerHeight
+
         color: root.headerBackground
 
         Text {
             anchors.left: parent.left
-            anchors.leftMargin: Math.max(16, root.width * 0.04)
+            anchors.leftMargin: root.pageMargin
             anchors.verticalCenter: parent.verticalCenter
+
             text: "MiniNotes"
+
             color: root.headerForeground
-            font.pixelSize: Math.max(20, Math.min(root.width * 0.04, 28))
+
+            font.pointSize: 21
             font.weight: Font.DemiBold
+
+            verticalAlignment: Text.AlignVCenter
         }
     }
 
-    Column {
-        anchors.centerIn: parent
-        width: Math.min(parent.width - 48, 480)
-        spacing: Math.max(14, root.width * 0.03)
-
-        Text {
-            anchors.horizontalCenter: parent.horizontalCenter
-            text: "📝"
-            font.pixelSize: Math.max(72, Math.min(root.width * 0.18, 112))
-        }
-
-        Text {
-            width: parent.width
-            horizontalAlignment: Text.AlignHCenter
-            wrapMode: Text.WordWrap
-            text: noteController.noteCount === 0
-                ? "No notes yet"
-                : noteController.noteCount === 1 ? "1 note stored" : noteController.noteCount + " notes stored"
-            color: "#333333"
-            font.pixelSize: Math.max(22, Math.min(root.width * 0.04, 32))
-            font.weight: Font.DemiBold
-        }
-
-        Text {
-            width: parent.width
-            horizontalAlignment: Text.AlignHCenter
-            wrapMode: Text.WordWrap
-            text: "Tap + to write your first note"
-            color: "#888888"
-            font.pixelSize: Math.max(16, Math.min(root.width * 0.032, 22))
-            visible: noteController.noteCount === 0
-        }
-    }
-
-    Rectangle {
-        id: fab
-        width: fabSize
-        height: fabSize
-        radius: fabSize / 2
-        color: fabArea.pressed ? "#5E2750" : root.accent
+    ColumnLayout {
+        anchors.left: parent.left
         anchors.right: parent.right
-        anchors.rightMargin: Math.max(20, root.width * 0.05)
+        anchors.top: header.bottom
         anchors.bottom: parent.bottom
-        anchors.bottomMargin: Math.max(24, root.width * 0.05)
 
-        readonly property real fabSize: Math.max(64, Math.min(root.width * 0.14, 80))
+        anchors.leftMargin: root.pageMargin
+        anchors.rightMargin: root.pageMargin
 
-        Text {
+        spacing: 18
+
+        Item {
+            Layout.fillWidth: true
+            Layout.fillHeight: true
+
+            Column {
+                anchors.centerIn: parent
+
+                width: Math.min(
+                    parent.width,
+                    420
+                )
+
+                spacing: 16
+
+                Text {
+                    anchors.horizontalCenter: parent.horizontalCenter
+
+                    text: "📝"
+
+                    font.pointSize: 56
+
+                    horizontalAlignment: Text.AlignHCenter
+                }
+
+                Text {
+                    width: parent.width
+
+                    horizontalAlignment: Text.AlignHCenter
+                    wrapMode: Text.WordWrap
+
+                    text: noteController.noteCount === 0
+                        ? "No notes yet"
+                        : noteController.noteCount === 1
+                            ? "1 note stored"
+                            : noteController.noteCount + " notes stored"
+
+                    color: "#333333"
+
+                    font.pointSize: 21
+                    font.weight: Font.DemiBold
+                }
+
+                Text {
+                    width: parent.width
+
+                    horizontalAlignment: Text.AlignHCenter
+                    wrapMode: Text.WordWrap
+
+                    text: "Tap + to write your first note"
+
+                    color: "#777777"
+
+                    font.pointSize: 16
+
+                    visible: noteController.noteCount === 0
+                }
+            }
+        }
+    }
+
+    // Transparent touch target around the visible FAB.
+    Item {
+        id: fabHitArea
+
+        width: root.fabHitSize
+        height: root.fabHitSize
+
+        anchors.right: parent.right
+        anchors.bottom: parent.bottom
+
+        anchors.rightMargin: 16
+        anchors.bottomMargin: 16
+
+        Rectangle {
+            id: fab
+
+            width: root.fabVisualSize
+            height: root.fabVisualSize
+
             anchors.centerIn: parent
-            text: "+"
-            color: "#FFFFFF"
-            font.pixelSize: fabSize * 0.55
-            font.weight: Font.Light
+
+            radius: width / 2
+
+            color: fabTap.pressed
+                ? root.accentPressed
+                : root.accent
+
+            // Visual feedback.
+            scale: fabTap.pressed ? 0.96 : 1.0
+
+            Behavior on scale {
+                NumberAnimation {
+                    duration: 80
+                }
+            }
+
+            Text {
+                anchors.centerIn: parent
+
+                text: "+"
+
+                color: "#FFFFFF"
+
+                font.pointSize: 38
+                font.weight: Font.Light
+
+                verticalAlignment: Text.AlignVCenter
+                horizontalAlignment: Text.AlignHCenter
+            }
         }
 
-        MouseArea {
-            id: fabArea
-            anchors.fill: parent
-            onClicked: StackView.view.push("CreateNotePage.qml")
+        TapHandler {
+            id: fabTap
+
+            // TapHandler is designed for both touchscreen taps and mouse clicks.
+            onTapped: {
+                var view = root.StackView.view
+
+                if (view)
+                    view.push("CreateNotePage.qml")
+            }
         }
     }
 }
