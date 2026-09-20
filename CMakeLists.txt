@@ -9,20 +9,21 @@ find_package(QT NAMES Qt6 Qt5 REQUIRED COMPONENTS Core)
 find_package(Qt${QT_VERSION_MAJOR} REQUIRED COMPONENTS Core Gui Sql Qml Quick)
 
 set(MININOTES_SOURCES
-    src/database.cpp
-    src/noterepository.cpp
-    src/notecontroller.cpp
-    src/notelistmodel.cpp)
+    src/data/sqlite/database.cpp
+    src/data/sqlite/sqlite_note_repository.cpp
+    src/presentation/note_controller.cpp
+    src/presentation/note_list_model.cpp)
 
 set(MININOTES_HEADERS
-    src/note.h
-    src/database.h
-    src/noterepository.h
-    src/notecontroller.h
-    src/notelistmodel.h)
+    src/domain/note.h
+    src/domain/inote_repository.h
+    src/data/sqlite/database.h
+    src/data/sqlite/sqlite_note_repository.h
+    src/presentation/note_controller.h
+    src/presentation/note_list_model.h)
 
 add_executable(mininotes
-    src/main.cpp
+    src/app/main.cpp
     ${MININOTES_SOURCES}
     ${MININOTES_HEADERS})
 

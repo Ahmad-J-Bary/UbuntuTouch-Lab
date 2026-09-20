@@ -1,13 +1,13 @@
-#include "notecontroller.h"
+#include "note_controller.h"
 
-#include "notelistmodel.h"
-#include "noterepository.h"
+#include "note_list_model.h"
+#include "domain/inote_repository.h"
 
 #include <QDebug>
 #include <QPointer>
 #include <QTimer>
 
-NoteController::NoteController(NoteRepository *repository, QObject *parent)
+NoteController::NoteController(INoteRepository *repository, QObject *parent)
     : QObject(parent)
     , m_repository(repository)
     , m_notesModel(new NoteListModel(this))

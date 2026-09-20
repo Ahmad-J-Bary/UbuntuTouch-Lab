@@ -1,4 +1,4 @@
-#include "noterepository.h"
+#include "sqlite_note_repository.h"
 
 #include "database.h"
 
@@ -9,12 +9,12 @@
 #include <QSqlQuery>
 #include <QVariant>
 
-NoteRepository::NoteRepository(Database *database)
+SqliteNoteRepository::SqliteNoteRepository(Database *database)
     : m_database(database)
 {
 }
 
-bool NoteRepository::createNote(const QString &title, const QString &body, Note *createdNote)
+bool SqliteNoteRepository::createNote(const QString &title, const QString &body, Note *createdNote)
 {
     m_lastError.clear();
 
@@ -66,7 +66,7 @@ bool NoteRepository::createNote(const QString &title, const QString &body, Note 
     return true;
 }
 
-bool NoteRepository::updateNote(int id, const QString &title, const QString &body, Note *updatedNote)
+bool SqliteNoteRepository::updateNote(int id, const QString &title, const QString &body, Note *updatedNote)
 {
     m_lastError.clear();
 
@@ -125,7 +125,7 @@ bool NoteRepository::updateNote(int id, const QString &title, const QString &bod
     return true;
 }
 
-bool NoteRepository::deleteNote(int id)
+bool SqliteNoteRepository::deleteNote(int id)
 {
     m_lastError.clear();
 
@@ -158,7 +158,7 @@ bool NoteRepository::deleteNote(int id)
     return true;
 }
 
-bool NoteRepository::findNote(int id, Note *note) const
+bool SqliteNoteRepository::findNote(int id, Note *note) const
 {
     m_lastError.clear();
 
@@ -191,7 +191,7 @@ bool NoteRepository::findNote(int id, Note *note) const
     return true;
 }
 
-QList<Note> NoteRepository::listNotes() const
+QList<Note> SqliteNoteRepository::listNotes() const
 {
     m_lastError.clear();
 
@@ -221,7 +221,7 @@ QList<Note> NoteRepository::listNotes() const
     return notes;
 }
 
-int NoteRepository::count() const
+int SqliteNoteRepository::count() const
 {
     QSqlQuery query(m_database ? m_database->connection() : QSqlDatabase());
     if (!query.exec(QStringLiteral("SELECT COUNT(*) FROM notes")) || !query.next()) {
@@ -231,7 +231,7 @@ int NoteRepository::count() const
     return query.value(0).toInt();
 }
 
-QString NoteRepository::lastError() const
+QString SqliteNoteRepository::lastError() const
 {
     return m_lastError;
 }

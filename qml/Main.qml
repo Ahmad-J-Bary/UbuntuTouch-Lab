@@ -21,7 +21,7 @@ ApplicationWindow {
     StackView {
         id: stackView
         anchors.fill: parent
-        initialItem: NotesListPage {}
+        initialItem: "pages/NotesListPage.qml"
     }
 
     readonly property bool __automation:
@@ -88,7 +88,7 @@ ApplicationWindow {
         case 1: {
             console.log("AUTOMATION: begin")
             window.__automationInitialCount = noteController.noteCount
-            var page = stackView.push("CreateNotePage.qml")
+            var page = stackView.push("pages/CreateNotePage.qml")
             window.__automationPage = page
             break
         }

@@ -1,6 +1,6 @@
-#include "database.h"
-#include "notecontroller.h"
-#include "noterepository.h"
+#include "data/sqlite/database.h"
+#include "data/sqlite/sqlite_note_repository.h"
+#include "presentation/note_controller.h"
 
 #include <QSignalSpy>
 #include <QSqlQuery>
@@ -32,7 +32,7 @@ private:
 
     QTemporaryDir m_dir;
     Database *m_database = nullptr;
-    NoteRepository *m_repository = nullptr;
+    SqliteNoteRepository *m_repository = nullptr;
     NoteController *m_controller = nullptr;
 };
 
@@ -46,7 +46,7 @@ void BackendTest::initTestCase()
     QVERIFY2(m_database->open(dbPath, &error), qPrintable(error));
     QVERIFY2(m_database->createSchema(&error), qPrintable(error));
 
-    m_repository = new NoteRepository(m_database);
+    m_repository = new SqliteNoteRepository(m_database);
     m_controller = new NoteController(m_repository);
 }
 
@@ -149,7 +149,7 @@ void BackendTest::testDuplicateSaveRequest()
 void BackendTest::testDatabaseFailure()
 {
     Database brokenDatabase;
-    NoteRepository repository(&brokenDatabase);
+    SqliteNoteRepository repository(&brokenDatabase);
     NoteController controller(&repository);
     QSignalSpy failedSpy(&controller, &NoteController::saveFailed);
     controller.saveNote(QStringLiteral("Title"), QStringLiteral("Body"));
@@ -165,7 +165,7 @@ void BackendTest::testPersistenceAcrossReopen()
         QString error;
         QVERIFY2(db1.open(dbPath, &error), qPrintable(error));
         QVERIFY2(db1.createSchema(&error), qPrintable(error));
-        NoteRepository repo(&db1);
+        SqliteNoteRepository repo(&db1);
         NoteController controller(&repo);
         QSignalSpy savedSpy(&controller, &NoteController::noteSaved);
         controller.saveNote(QStringLiteral("Persistent Note"), QStringLiteral("Still here after restart"));

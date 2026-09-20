@@ -1,6 +1,6 @@
 #pragma once
 
-#include "note.h"
+#include "domain/note.h"
 
 #include <QAbstractListModel>
 #include <QList>

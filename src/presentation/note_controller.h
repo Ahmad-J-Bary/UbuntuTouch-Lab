@@ -5,7 +5,7 @@
 #include <QString>
 #include <QVariantMap>
 
-class NoteRepository;
+class INoteRepository;
 class NoteListModel;
 
 class NoteController : public QObject
@@ -18,7 +18,7 @@ class NoteController : public QObject
     Q_PROPERTY(QAbstractItemModel *notesModel READ notesModel CONSTANT)
 
 public:
-    explicit NoteController(NoteRepository *repository, QObject *parent = nullptr);
+    explicit NoteController(INoteRepository *repository, QObject *parent = nullptr);
 
     bool isSaving() const;
     bool isDeleting() const;
@@ -56,7 +56,7 @@ private:
     void doDelete(int id);
     void setNoteCount(int count);
 
-    NoteRepository *m_repository;
+    INoteRepository *m_repository;
     NoteListModel *m_notesModel;
     bool m_saving = false;
     bool m_deleting = false;

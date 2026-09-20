@@ -1,6 +1,6 @@
-#include "database.h"
-#include "notecontroller.h"
-#include "noterepository.h"
+#include "data/sqlite/database.h"
+#include "data/sqlite/sqlite_note_repository.h"
+#include "presentation/note_controller.h"
 
 #include <QCoreApplication>
 #include <QDebug>
@@ -66,7 +66,7 @@ int main(int argc, char *argv[])
                    .arg(dbError);
     }
 
-    NoteRepository repository(&database);
+    SqliteNoteRepository repository(&database);
     NoteController controller(&repository);
     controller.refreshNotes();
 
