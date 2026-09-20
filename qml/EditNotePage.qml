@@ -198,25 +198,90 @@ Page {
                     Layout.topMargin: ui.size(8, root.width, root.height)
                 }
 
-                TextArea {
-                    id: bodyField
+                Rectangle {
+                    id: bodyFrame
+
                     Layout.fillWidth: true
                     Layout.preferredHeight: Math.max(ui.size(260, root.width, root.height), Math.min(root.height * 0.42, ui.size(400, root.width, root.height)))
                     Layout.leftMargin: root.pageMargin
                     Layout.rightMargin: root.pageMargin
-                    placeholderText: "Write your note..."
-                    font.pointSize: ui.font(20, root.width, root.height)
-                    color: root.textPrimary
-                    padding: ui.size(17, root.width, root.height)
-                    wrapMode: Text.Wrap
-                    background: Rectangle {
-                        radius: ui.size(10, root.width, root.height)
-                        color: "#FFFFFF"
-                        border.color: bodyField.activeFocus ? root.accent : "#C9C9C9"
-                        border.width: bodyField.activeFocus ? 2 : 1
+
+                    radius: ui.size(10, root.width, root.height)
+                    color: "#FFFFFF"
+                    border.color: bodyField.activeFocus ? root.accent : "#C9C9C9"
+                    border.width: bodyField.activeFocus ? 2 : 1
+                    clip: true
+
+                    Flickable {
+                        id: bodyFlick
+
+                        anchors.fill: parent
+                        anchors.margins: bodyFrame.border.width
+
+                        clip: true
+                        interactive: bodyField.activeFocus
+                        boundsBehavior: Flickable.StopAtBounds
+                        contentWidth: width
+                        contentHeight: Math.max(height, bodyField.height)
+
+                        function ensureCursorVisible() {
+                            var r = bodyField.cursorRectangle
+                            var margin = ui.size(10, root.width, root.height)
+                            var viewportTop = bodyFlick.contentY + margin
+                            var viewportBottom = bodyFlick.contentY + bodyFlick.height - margin
+                            var target = bodyFlick.contentY
+
+                            if (r.y < viewportTop)
+                                target = r.y - margin
+                            else if (r.y + r.height > viewportBottom)
+                                target = r.y + r.height - bodyFlick.height + margin
+
+                            var maxY = Math.max(0, bodyFlick.contentHeight - bodyFlick.height)
+                            bodyFlick.contentY = Math.max(0, Math.min(maxY, target))
+                        }
+
+                        TextArea {
+                            id: bodyField
+                            objectName: "bodyField"
+
+                            width: bodyFlick.width
+                            height: Math.max(
+                                bodyFlick.height,
+                                contentHeight + topPadding + bottomPadding + ui.size(4, root.width, root.height)
+                            )
+
+                            placeholderText: "Write your note..."
+                            font.pointSize: ui.font(20, root.width, root.height)
+                            color: root.textPrimary
+                            padding: ui.size(17, root.width, root.height)
+                            wrapMode: Text.Wrap
+                            textFormat: TextEdit.PlainText
+                            selectByMouse: false
+                            selectByKeyboard: true
+                            persistentSelection: false
+
+                            background: Rectangle {
+                                color: "transparent"
+                            }
+
+                            onCursorRectangleChanged: {
+                                Qt.callLater(bodyFlick.ensureCursorVisible)
+                            }
+
+                            onTextChanged: {
+                                if (attempted)
+                                    validate()
+                                Qt.callLater(bodyFlick.ensureCursorVisible)
+                            }
+
+                            onActiveFocusChanged: {
+                                if (activeFocus)
+                                    Qt.callLater(bodyFlick.ensureCursorVisible)
+                            }
+                        }
                     }
-                    onTextChanged: if (attempted) validate()
                 }
+
 
                 Text {
                     id: bodyError
