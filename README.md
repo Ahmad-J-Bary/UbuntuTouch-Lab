@@ -6,9 +6,9 @@ The project originally started as a native Ubuntu Touch application and is now b
 
 | Item | Current state |
 | --- | --- |
-| Development version | **0.2.4** |
+| Development version | **0.2.5** |
 | Status | **Experimental / Development** |
-| Current OpenStore release | **0.2.4** |
+| Current OpenStore release | **0.2.5** |
 | Ubuntu Touch target | `ubuntu-touch-24.04-1.x` / ARM64 |
 | Development Qt target | **Qt 6** |
 | Frontend | QML / Qt Quick Controls |
@@ -37,7 +37,7 @@ The main goals are:
 
 ---
 
-# Current status — 0.2.4
+# Current status — 0.2.5
 
 MiniNotes currently provides a complete local note workflow:
 
@@ -834,7 +834,7 @@ vMAJOR.MINOR.PATCH
 For example:
 
 ```text
-v0.2.4
+v0.2.5
 ```
 
 The release pipeline currently creates the Ubuntu Touch GitHub Release and attaches the `.click` package.
