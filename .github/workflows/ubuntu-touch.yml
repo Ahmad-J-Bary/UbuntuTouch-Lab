@@ -298,10 +298,105 @@ jobs:
           if-no-files-found: error
           retention-days: 30
 
+
+  linux_deb:
+    if: startsWith(github.ref, 'refs/tags/v') || github.event_name == 'workflow_dispatch'
+    runs-on: ubuntu-24.04
+    timeout-minutes: 20
+    outputs:
+      version: ${{ steps.detect_version.outputs.version }}
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Detect application version
+        id: detect_version
+        run: |
+          set -euo pipefail
+
+          VERSION="$(sed -nE 's/^project\(mininotes VERSION ([0-9.]+).*/\1/p' CMakeLists.txt)"
+
+          test -n "$VERSION"
+
+          if [[ "$GITHUB_REF_NAME" =~ ^v[0-9]+\.[0-9]+\.[0-9]+$ ]]; then
+            TAG_VERSION="${GITHUB_REF_NAME#v}"
+
+            if [[ "$TAG_VERSION" != "$VERSION" ]]; then
+              echo "::error::tag $GITHUB_REF_NAME does not match application version $VERSION"
+              exit 1
+            fi
+          fi
+
+          echo "version=$VERSION" >> "$GITHUB_OUTPUT"
+
+      - name: Install Linux packaging dependencies
+        run: |
+          sudo apt-get update
+
+          sudo apt-get install -y --no-install-recommends \
+            cmake \
+            dpkg-dev \
+            fakeroot \
+            qt6-base-dev \
+            qt6-declarative-dev \
+            qml6-module-qtquick \
+            qml6-module-qtquick-window \
+            qml6-module-qtquick-controls \
+            qml6-module-qtquick-templates \
+            qml6-module-qtquick-layouts \
+            qml6-module-qtqml-workerscript \
+            libqt6sql6-sqlite
+
+      - name: Configure Linux package build
+        run: |
+          cmake --preset linux-package
+
+      - name: Build Linux package target
+        run: |
+          cmake --build --preset linux-package
+
+      - name: Build DEB package
+        run: |
+          set -euxo pipefail
+
+          cpack \
+            --config build/linux-package/CPackConfig.cmake \
+            -G DEB
+
+          DEB="$(find . \
+            -maxdepth 1 \
+            -type f \
+            -name 'mininotes_*.deb' \
+            -print -quit)"
+
+          test -n "$DEB"
+
+          mkdir -p dist
+
+          cp "$DEB" \
+            "dist/mininotes_${{ steps.detect_version.outputs.version }}_amd64.deb"
+
+          echo "===== DEB INFO ====="
+          dpkg-deb -I "$DEB"
+
+          echo "===== DEB CONTENTS ====="
+          dpkg-deb -c "$DEB" | grep -E \
+            '(/usr/bin/mininotes|/usr/share/mininotes|applications/|icons/|metainfo/)'
+
+      - name: Upload DEB artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: mininotes-linux-amd64-deb
+          path: dist/mininotes_*_amd64.deb
+          if-no-files-found: error
+          retention-days: 30
+
   release:
     needs:
       - build
       - linux_release
+      - linux_deb
     if: startsWith(github.ref, 'refs/tags/v')
     runs-on: ubuntu-24.04
     permissions:
@@ -323,6 +418,12 @@ jobs:
           name: mininotes-linux-x86_64
           path: dist/linux
 
+      - name: Download Linux DEB artifact
+        uses: actions/download-artifact@v4
+        with:
+          name: mininotes-linux-amd64-deb
+          path: dist/deb
+
       - name: Create or update GitHub Release
         env:
           GH_TOKEN: ${{ github.token }}
@@ -336,9 +437,11 @@ jobs:
 
           CLICK_FILE="dist/ubuntu-touch/mininotes_${VERSION}_arm64.click"
           LINUX_FILE="dist/linux/mininotes-${VERSION}-linux-x86_64.tar.gz"
+          DEB_FILE="dist/deb/mininotes_${VERSION}_amd64.deb"
 
           test -f "$CLICK_FILE"
           test -f "$LINUX_FILE"
+          test -f "$DEB_FILE"
 
           cat > release-notes.md <<EOF
           # MiniNotes $TAG
@@ -360,6 +463,7 @@ jobs:
 
           - mininotes_${VERSION}_arm64.click
           - mininotes-${VERSION}-linux-x86_64.tar.gz
+          - mininotes_${VERSION}_amd64.deb
 
           ## Experimental status
 
@@ -370,12 +474,14 @@ jobs:
             gh release upload "$TAG" \
               "$CLICK_FILE" \
               "$LINUX_FILE" \
+              "$DEB_FILE" \
               --repo "$GITHUB_REPOSITORY" \
               --clobber
           else
             gh release create "$TAG" \
               "$CLICK_FILE" \
               "$LINUX_FILE" \
+              "$DEB_FILE" \
               --repo "$GITHUB_REPOSITORY" \
               --title "MiniNotes $TAG" \
               --notes-file release-notes.md

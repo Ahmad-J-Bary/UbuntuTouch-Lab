@@ -5,7 +5,6 @@
         "minor": 21,
         "patch": 0
     },
-
     "configurePresets": [
         {
             "name": "linux-base",
@@ -51,9 +50,19 @@
                 "CMAKE_BUILD_TYPE": "Debug",
                 "MININOTES_BUILD_TESTS": "OFF"
             }
+        },
+        {
+            "name": "linux-package",
+            "inherits": "linux-base",
+            "description": "Linux Release build with standard installation/package layout",
+            "cacheVariables": {
+                "CMAKE_BUILD_TYPE": "Release",
+                "CMAKE_INSTALL_PREFIX": "/usr",
+                "MININOTES_BUILD_TESTS": "OFF",
+                "MININOTES_PACKAGE": "ON"
+            }
         }
     ],
-
     "buildPresets": [
         {
             "name": "linux-debug",
@@ -70,9 +79,12 @@
         {
             "name": "linux-e2e",
             "configurePreset": "linux-e2e"
+        },
+        {
+            "name": "linux-package",
+            "configurePreset": "linux-package"
         }
     ],
-
     "testPresets": [
         {
             "name": "linux-tests",

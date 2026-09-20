@@ -1,0 +1,49 @@
+<?xml version="1.0" encoding="UTF-8"?>
+
+<component type="desktop-application">
+    <id>io.github.Ahmad_J_Bary.UbuntuTouch_Lab</id>
+
+    <name>MiniNotes</name>
+
+    <summary>Offline-first notes application</summary>
+
+    <description>
+        <p>
+            MiniNotes is a small offline-first notes application built
+            with Qt, QML, C++ and SQLite.
+        </p>
+        <p>
+            Notes are stored locally on the device and remain available
+            without an Internet connection.
+        </p>
+    </description>
+
+    <launchable type="desktop-id">
+        io.github.Ahmad_J_Bary.UbuntuTouch_Lab.desktop
+    </launchable>
+
+    <icon type="stock">
+        io.github.Ahmad_J_Bary.UbuntuTouch_Lab
+    </icon>
+
+    <categories>
+        <category>Office</category>
+        <category>Utility</category>
+    </categories>
+
+    <keywords>
+        <keyword>Notes</keyword>
+        <keyword>SQLite</keyword>
+        <keyword>Offline</keyword>
+    </keywords>
+
+    <url type="homepage">
+        https://github.com/Ahmad-J-Bary/UbuntuTouch-Lab
+    </url>
+
+    <url type="bugtracker">
+        https://github.com/Ahmad-J-Bary/UbuntuTouch-Lab/issues
+    </url>
+
+    <developer_name>Ahmad Abdelbary</developer_name>
+</component>

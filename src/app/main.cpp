@@ -5,6 +5,7 @@
 #include "presentation/note_controller.h"
 
 #include <QCoreApplication>
+#include <QDir>
 #include <QDebug>
 #include <QFile>
 #include <QGuiApplication>
@@ -20,6 +21,9 @@ static QString resolveQmlMain()
     const QStringList candidates = {
         appDir + QStringLiteral("/qml/Main.qml"),
         appDir + QStringLiteral("/../qml/Main.qml"),
+        QDir(appDir).filePath(
+            QStringLiteral("../share/mininotes/qml/Main.qml")
+        ),
     };
 
     for (const QString &candidate : candidates) {

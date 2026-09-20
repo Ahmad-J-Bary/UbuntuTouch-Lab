@@ -5,6 +5,8 @@ set(CMAKE_CXX_STANDARD 17)
 set(CMAKE_CXX_STANDARD_REQUIRED ON)
 set(CMAKE_AUTOMOC ON)
 
+include(GNUInstallDirs)
+
 find_package(QT NAMES Qt6 Qt5 REQUIRED COMPONENTS Core)
 find_package(Qt${QT_VERSION_MAJOR} REQUIRED COMPONENTS Core Gui Sql Qml Quick)
 
@@ -43,13 +45,73 @@ target_link_libraries(mininotes PRIVATE
 
 configure_file(manifest.json.in ${CMAKE_CURRENT_BINARY_DIR}/manifest.json)
 
-install(TARGETS mininotes RUNTIME DESTINATION ${CMAKE_INSTALL_PREFIX})
-install(DIRECTORY ${CMAKE_CURRENT_SOURCE_DIR}/qml DESTINATION ${CMAKE_INSTALL_PREFIX})
-install(FILES ${CMAKE_CURRENT_BINARY_DIR}/manifest.json DESTINATION ${CMAKE_INSTALL_PREFIX})
-install(FILES ${CMAKE_CURRENT_SOURCE_DIR}/mininotes.apparmor DESTINATION ${CMAKE_INSTALL_PREFIX})
-install(FILES ${CMAKE_CURRENT_SOURCE_DIR}/mininotes.desktop DESTINATION ${CMAKE_INSTALL_PREFIX})
-install(FILES ${CMAKE_CURRENT_SOURCE_DIR}/assets/icons/mininotes.svg
-    DESTINATION ${CMAKE_INSTALL_PREFIX}/assets/icons)
+option(
+    MININOTES_PACKAGE
+    "Enable standard Linux desktop installation/package layout"
+    OFF
+)
+
+if(MININOTES_PACKAGE)
+    install(
+        TARGETS mininotes
+        RUNTIME DESTINATION ${CMAKE_INSTALL_BINDIR}
+    )
+
+    install(
+        DIRECTORY ${CMAKE_CURRENT_SOURCE_DIR}/qml/
+        DESTINATION ${CMAKE_INSTALL_DATADIR}/mininotes/qml
+    )
+
+    install(
+        FILES
+            ${CMAKE_CURRENT_SOURCE_DIR}/packaging/appstream/io.github.Ahmad_J_Bary.UbuntuTouch_Lab.desktop
+        DESTINATION ${CMAKE_INSTALL_DATADIR}/applications
+    )
+
+    install(
+        FILES
+            ${CMAKE_CURRENT_SOURCE_DIR}/packaging/appstream/io.github.Ahmad_J_Bary.UbuntuTouch_Lab.metainfo.xml
+        DESTINATION ${CMAKE_INSTALL_DATADIR}/metainfo
+    )
+
+    install(
+        FILES
+            ${CMAKE_CURRENT_SOURCE_DIR}/assets/icons/mininotes.svg
+        DESTINATION ${CMAKE_INSTALL_DATADIR}/icons/hicolor/scalable/apps
+        RENAME io.github.Ahmad_J_Bary.UbuntuTouch_Lab.svg
+    )
+
+    set(CPACK_PACKAGE_NAME "mininotes")
+    set(CPACK_PACKAGE_VENDOR "MiniNotes Developers")
+    set(CPACK_PACKAGE_CONTACT "MiniNotes Developers")
+    set(CPACK_PACKAGE_DESCRIPTION_SUMMARY
+        "Offline-first notes application"
+    )
+    set(CPACK_PACKAGE_VERSION ${PROJECT_VERSION})
+    set(CPACK_PACKAGE_INSTALL_DIRECTORY "MiniNotes")
+
+    set(CPACK_DEBIAN_PACKAGE_MAINTAINER "MiniNotes Developers")
+    set(CPACK_DEBIAN_PACKAGE_SECTION "utils")
+    set(CPACK_DEBIAN_PACKAGE_SHLIBDEPS ON)
+    set(
+        CPACK_DEBIAN_PACKAGE_DEPENDS
+        "libqt6sql6-sqlite, qml6-module-qtquick, qml6-module-qtquick-controls, qml6-module-qtquick-layouts, qml6-module-qtquick-window"
+    )
+
+    set(CPACK_DEBIAN_FILE_NAME DEB-DEFAULT)
+    set(CPACK_STRIP_FILES ON)
+    set(CPACK_GENERATOR DEB)
+
+    include(CPack)
+else()
+    install(TARGETS mininotes RUNTIME DESTINATION ${CMAKE_INSTALL_PREFIX})
+    install(DIRECTORY ${CMAKE_CURRENT_SOURCE_DIR}/qml DESTINATION ${CMAKE_INSTALL_PREFIX})
+    install(FILES ${CMAKE_CURRENT_BINARY_DIR}/manifest.json DESTINATION ${CMAKE_INSTALL_PREFIX})
+    install(FILES ${CMAKE_CURRENT_SOURCE_DIR}/mininotes.apparmor DESTINATION ${CMAKE_INSTALL_PREFIX})
+    install(FILES ${CMAKE_CURRENT_SOURCE_DIR}/mininotes.desktop DESTINATION ${CMAKE_INSTALL_PREFIX})
+    install(FILES ${CMAKE_CURRENT_SOURCE_DIR}/assets/icons/mininotes.svg
+        DESTINATION ${CMAKE_INSTALL_PREFIX}/assets/icons)
+endif()
 
 add_custom_command(TARGET mininotes POST_BUILD
     COMMAND ${CMAKE_COMMAND} -E copy_directory
