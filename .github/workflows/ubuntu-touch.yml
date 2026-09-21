@@ -21,8 +21,6 @@ permissions:
 
 env:
   CLICKABLE_VERSION: "8.10.0"
-  SDK_IMAGE: clickable/amd64-ut24.04-1.x-arm64
-  PROVISIONED_IMAGE: mininotes-ut-sdk:24.04-1.x-arm64
 
 jobs:
   build:
@@ -110,79 +108,163 @@ jobs:
           tail -15 /tmp/e2e.log
           grep -q "AUTOMATION: RESULT PASS" /tmp/e2e.log
 
-      - name: Provision Ubuntu Touch SDK image (official base + Qt6 deps + reviewer 2404.2 policy data)
+  ubuntu_touch:
+    needs:
+      - build
+    runs-on: ubuntu-24.04
+    timeout-minutes: 60
+    strategy:
+      max-parallel: 1
+      fail-fast: true
+      matrix:
+        include:
+          - arch: arm64
+            sdk_image: docker.io/clickable/ci-ut24.04-1.x-arm64
+          - arch: armhf
+            sdk_image: docker.io/clickable/ci-ut24.04-1.x-armhf
+          - arch: amd64
+            sdk_image: docker.io/clickable/ci-ut24.04-1.x-amd64
+
+    env:
+      CLICKABLE_VERSION: "8.10.0"
+      EXPECTED_VERSION: ${{ needs.build.outputs.version }}
+      ARCH: ${{ matrix.arch }}
+      SDK_IMAGE: ${{ matrix.sdk_image }}
+      PROVISIONED_IMAGE: mininotes-ut-sdk:24.04-1.x-${{ matrix.arch }}
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Install Clickable
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y --no-install-recommends \
+            python3-pip \
+            click \
+            file
+          python3 -m pip install --break-system-packages \
+            "clickable-ut==${CLICKABLE_VERSION}"
+
+      - name: Provision Ubuntu Touch SDK image
         run: |
           set -euxo pipefail
-          # Official Clickable 24.04-1.x ARM64 builder image, provisioned on the
-          # runner (no local artifacts). Dependencies declared in
-          # clickable.yaml (dependencies_target) are preinstalled as root, and
-          # image setup is skipped later so clickable does not regenerate an
-          # image Dockerfile.
+
           docker pull "$SDK_IMAGE"
           docker run -d --name ut-sdk "$SDK_IMAGE" sleep infinity
+
           docker exec ut-sdk bash -lc \
             'apt-get update && DEBIAN_FRONTEND=noninteractive apt-get install -y --no-install-recommends \
                qt6-base-dev qt6-declarative-dev libqt6sql6-sqlite'
-          # click-reviewers-tools in the 24.04 archive ships apparmor policy
-          # data only up to 2404.1 while the ubuntu-touch-24.04-1.x framework
-          # uses 2404.2 -> reviewer DATA limitation (the runtime 2404.2 policy
-          # exists in the SDK image itself), not a package defect. Add the
-          # 2404.2 baseline to the reviewer as a copy of 2404.1 (the declarative
-          # default for an empty policy_groups profile).
+
           cat > patch_reviewer.py <<'PY'
           import re
+
           p = "/usr/lib/python3/dist-packages/clickreviews/apparmor.py"
           s = open(p).read()
-          pat = re.compile(r'(?m)^(?P<ind>[ \t]+)"2404\.1": \{(?P<body>.*?)^(?P=ind)\},', re.S)
+
+          pat = re.compile(
+              r'(?m)^(?P<ind>[ \t]+)"2404\.1": \{(?P<body>.*?)^(?P=ind)\},',
+              re.S,
+          )
+
           if '"2404.2"' not in s:
               m = pat.search(s)
               assert m, "2404.1 entry not found"
-              ind, body = m.group('ind'), m.group('body')
-              clone = ind + '"2404.2": {' + body + '\n' + ind + '},\n'
+
+              ind = m.group("ind")
+              body = m.group("body")
+
+              clone = (
+                  ind
+                  + '"2404.2": {'
+                  + body
+                  + '\n'
+                  + ind
+                  + '},\n'
+              )
+
               s = s[:m.end()] + '\n' + clone + s[m.end():]
-              open(p, 'w').write(s)
-          compile(s, p, 'exec')
-          print('apparmor.py patched:', '"2404.2"' in s)
+              open(p, "w").write(s)
+
+          compile(s, p, "exec")
+          print("apparmor.py patched:", '"2404.2"' in s)
           PY
+
           docker cp patch_reviewer.py ut-sdk:/tmp/patch_reviewer.py
           docker exec ut-sdk python3 /tmp/patch_reviewer.py
+
           docker commit ut-sdk "$PROVISIONED_IMAGE"
           docker rm -f ut-sdk
 
-      - name: Build ARM64 Click package (clickable)
+      - name: Build Ubuntu Touch Click package
         env:
           CLICKABLE_DOCKER_COMMAND: docker
-        run: |
-          clickable build --arch arm64 --docker-image "$PROVISIONED_IMAGE" --skip-image-setup
-          test -f "build/aarch64-linux-gnu/app/mininotes_${EXPECTED_VERSION}_arm64.click"
-          ls -la "build/aarch64-linux-gnu/app/mininotes_${EXPECTED_VERSION}_arm64.click"
-
-      - name: Validate package metadata and contents
-        env:
-          EXPECTED_VERSION: ${{ env.EXPECTED_VERSION }}
+          CLICKABLE_NON_INTERACTIVE: "1"
         run: |
           set -euxo pipefail
-          CLICK_OUT="build/aarch64-linux-gnu/app/mininotes_${EXPECTED_VERSION}_arm64.click"
+
+          clickable build \
+            --arch "$ARCH" \
+            --docker-image "$PROVISIONED_IMAGE" \
+            --skip-image-setup
+
+          CLICK_OUT="$(find build \
+            -type f \
+            -name "mininotes_${EXPECTED_VERSION}_${ARCH}.click" \
+            -print -quit)"
+
+          test -n "$CLICK_OUT"
+          test -f "$CLICK_OUT"
+
+          echo "CLICK_OUT=$CLICK_OUT" >> "$GITHUB_ENV"
+
+          ls -lh "$CLICK_OUT"
+
+      - name: Validate package metadata and contents
+        run: |
+          set -euxo pipefail
+
           click info "$CLICK_OUT" > /tmp/info.json
           cat /tmp/info.json
-          EXPECTED_VERSION="$EXPECTED_VERSION" python3 - <<'PY'
-          import json, os
-          expected = os.environ["EXPECTED_VERSION"]
-          m = json.load(open("/tmp/info.json"))
-          assert m["architecture"] == "arm64", m
-          assert m["framework"] == "ubuntu-touch-24.04-1.x", m
-          assert m["name"] == "mininotes", m
-          assert m["title"] == "MiniNotes", m
-          assert m["version"] == expected, (m["version"], expected)
-          assert "mininotes" in m["hooks"]
-          assert "apparmor" in m["hooks"]["mininotes"]
-          assert "desktop" in m["hooks"]["mininotes"]
+
+          EXPECTED_VERSION="$EXPECTED_VERSION" \
+          ARCH="$ARCH" \
+          python3 - <<'PY'
+          import json
+          import os
+
+          expected_version = os.environ["EXPECTED_VERSION"]
+          expected_arch = os.environ["ARCH"]
+
+          manifest = json.load(open("/tmp/info.json"))
+
+          assert manifest["architecture"] == expected_arch, manifest
+          assert manifest["framework"] == "ubuntu-touch-24.04-1.x", manifest
+          assert manifest["name"] == "mininotes", manifest
+          assert manifest["title"] == "MiniNotes", manifest
+          assert manifest["version"] == expected_version, (
+              manifest["version"],
+              expected_version,
+          )
+          assert "mininotes" in manifest["hooks"]
+          assert "apparmor" in manifest["hooks"]["mininotes"]
+          assert "desktop" in manifest["hooks"]["mininotes"]
+
           print("manifest OK")
           PY
+
+          ACTUAL_ARCH="$(dpkg-deb -f "$CLICK_OUT" Architecture)"
+          test "$ACTUAL_ARCH" = "$ARCH"
+
           click contents "$CLICK_OUT"
-          rm -rf /tmp/pk && mkdir -p /tmp/pk && dpkg-deb -x "$CLICK_OUT" /tmp/pk
+
+          rm -rf /tmp/pk
+          mkdir -p /tmp/pk
+
+          dpkg-deb -x "$CLICK_OUT" /tmp/pk
           dpkg-deb -e "$CLICK_OUT" /tmp/pk/DEBIAN
-          file /tmp/pk/mininotes | grep -q "ARM aarch64"
+
           for f in \
             mininotes \
             qml/Main.qml \
@@ -195,17 +277,20 @@ jobs:
             assets/icons/mininotes.svg; do
             test -f "/tmp/pk/$f"
           done
+
           python3 -c "import json; json.load(open('/tmp/pk/mininotes.apparmor'))"
-          grep -q '"architecture": "arm64"' /tmp/pk/DEBIAN/manifest
+
+          grep -q "\"architecture\": \"${ARCH}\"" /tmp/pk/DEBIAN/manifest
           grep -q '"framework": "ubuntu-touch-24.04-1.x"' /tmp/pk/DEBIAN/manifest
           grep -q "\"version\": \"${EXPECTED_VERSION}\"" /tmp/pk/DEBIAN/manifest
+
           echo "package validation OK"
 
-      - name: Upload .click artifact
+      - name: Upload Ubuntu Touch artifact
         uses: actions/upload-artifact@v4
         with:
-          name: mininotes-ubuntu-touch-arm64
-          path: build/aarch64-linux-gnu/app/mininotes_${{ env.EXPECTED_VERSION }}_arm64.click
+          name: mininotes-ubuntu-touch-${{ matrix.arch }}
+          path: ${{ env.CLICK_OUT }}
           if-no-files-found: error
           retention-days: 30
 
@@ -222,7 +307,7 @@ jobs:
             exit 1
           }
 
-          clickable publish --arch arm64
+          clickable publish --arch "$ARCH"
 
   linux_release:
     if: startsWith(github.ref, 'refs/tags/v')
@@ -486,6 +571,7 @@ jobs:
   release:
     needs:
       - build
+      - ubuntu_touch
       - linux_release
       - linux_deb
       - linux_snap
@@ -498,11 +584,12 @@ jobs:
       - name: Checkout
         uses: actions/checkout@v4
 
-      - name: Download Ubuntu Touch artifact
+      - name: Download Ubuntu Touch artifacts
         uses: actions/download-artifact@v4
         with:
-          name: mininotes-ubuntu-touch-arm64
+          pattern: mininotes-ubuntu-touch-*
           path: dist/ubuntu-touch
+          merge-multiple: true
 
       - name: Download Linux Desktop artifact
         uses: actions/download-artifact@v4
@@ -533,12 +620,16 @@ jobs:
 
           test "$TAG" = "v${VERSION}"
 
-          CLICK_FILE="dist/ubuntu-touch/mininotes_${VERSION}_arm64.click"
+          CLICK_ARM64="dist/ubuntu-touch/mininotes_${VERSION}_arm64.click"
+          CLICK_ARMHF="dist/ubuntu-touch/mininotes_${VERSION}_armhf.click"
+          CLICK_AMD64="dist/ubuntu-touch/mininotes_${VERSION}_amd64.click"
           LINUX_FILE="dist/linux/mininotes-${VERSION}-linux-x86_64.tar.gz"
           DEB_FILE="dist/deb/mininotes_${VERSION}_amd64.deb"
           SNAP_FILE="dist/snap/mininotes_${VERSION}_amd64.snap"
 
-          test -f "$CLICK_FILE"
+          test -f "$CLICK_ARM64"
+          test -f "$CLICK_ARMHF"
+          test -f "$CLICK_AMD64"
           test -f "$LINUX_FILE"
           test -f "$DEB_FILE"
           test -f "$SNAP_FILE"
@@ -557,11 +648,15 @@ jobs:
           ## Targets
 
           - Ubuntu Touch 24.04-1.x / ARM64
+          - Ubuntu Touch 24.04-1.x / ARMHF
+          - Ubuntu Touch 24.04-1.x / AMD64
           - Linux desktop / x86_64
 
           ## Artifacts
 
           - mininotes_${VERSION}_arm64.click
+          - mininotes_${VERSION}_armhf.click
+          - mininotes_${VERSION}_amd64.click
           - mininotes-${VERSION}-linux-x86_64.tar.gz
           - mininotes_${VERSION}_amd64.deb
           - mininotes_${VERSION}_amd64.snap
@@ -573,7 +668,9 @@ jobs:
 
           if gh release view "$TAG" --repo "$GITHUB_REPOSITORY" >/dev/null 2>&1; then
             gh release upload "$TAG" \
-              "$CLICK_FILE" \
+              "$CLICK_ARM64" \
+              "$CLICK_ARMHF" \
+              "$CLICK_AMD64" \
               "$LINUX_FILE" \
               "$DEB_FILE" \
               "$SNAP_FILE" \
@@ -581,7 +678,9 @@ jobs:
               --clobber
           else
             gh release create "$TAG" \
-              "$CLICK_FILE" \
+              "$CLICK_ARM64" \
+              "$CLICK_ARMHF" \
+              "$CLICK_AMD64" \
               "$LINUX_FILE" \
               "$DEB_FILE" \
               "$SNAP_FILE" \
