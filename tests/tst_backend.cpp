@@ -1,6 +1,7 @@
-#include "database.h"
-#include "notecontroller.h"
-#include "noterepository.h"
+#include "data/sqlite/database.h"
+#include "data/sqlite/sqlite_note_repository.h"
+#include "application/note_service.h"
+#include "presentation/note_controller.h"
 
 #include <QSignalSpy>
 #include <QSqlQuery>
@@ -32,7 +33,8 @@ private:
 
     QTemporaryDir m_dir;
     Database *m_database = nullptr;
-    NoteRepository *m_repository = nullptr;
+    SqliteNoteRepository *m_repository = nullptr;
+    NoteService *m_service = nullptr;
     NoteController *m_controller = nullptr;
 };
 
@@ -46,8 +48,9 @@ void BackendTest::initTestCase()
     QVERIFY2(m_database->open(dbPath, &error), qPrintable(error));
     QVERIFY2(m_database->createSchema(&error), qPrintable(error));
 
-    m_repository = new NoteRepository(m_database);
-    m_controller = new NoteController(m_repository);
+    m_repository = new SqliteNoteRepository(m_database);
+    m_service = new NoteService(m_repository);
+    m_controller = new NoteController(m_service);
 }
 
 int BackendTest::count() const
@@ -149,8 +152,9 @@ void BackendTest::testDuplicateSaveRequest()
 void BackendTest::testDatabaseFailure()
 {
     Database brokenDatabase;
-    NoteRepository repository(&brokenDatabase);
-    NoteController controller(&repository);
+    SqliteNoteRepository repository(&brokenDatabase);
+    NoteService service(&repository);
+    NoteController controller(&service);
     QSignalSpy failedSpy(&controller, &NoteController::saveFailed);
     controller.saveNote(QStringLiteral("Title"), QStringLiteral("Body"));
     QVERIFY2(failedSpy.wait(3000), "saveFailed signal was not emitted");
@@ -165,8 +169,9 @@ void BackendTest::testPersistenceAcrossReopen()
         QString error;
         QVERIFY2(db1.open(dbPath, &error), qPrintable(error));
         QVERIFY2(db1.createSchema(&error), qPrintable(error));
-        NoteRepository repo(&db1);
-        NoteController controller(&repo);
+        SqliteNoteRepository repo(&db1);
+        NoteService service(&repo);
+        NoteController controller(&service);
         QSignalSpy savedSpy(&controller, &NoteController::noteSaved);
         controller.saveNote(QStringLiteral("Persistent Note"), QStringLiteral("Still here after restart"));
         QVERIFY2(savedSpy.wait(3000), "noteSaved signal was not emitted");

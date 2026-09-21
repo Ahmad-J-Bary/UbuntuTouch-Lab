@@ -1,0 +1,53 @@
+name: mininotes
+
+base: core24
+
+version: git
+title: MiniNotes
+contact:
+  - https://github.com/Ahmad-J-Bary/UbuntuTouch-Lab
+issues:
+  - https://github.com/Ahmad-J-Bary/UbuntuTouch-Lab/issues
+source-code:
+  - https://github.com/Ahmad-J-Bary/UbuntuTouch-Lab
+website:
+  - https://github.com/Ahmad-J-Bary/UbuntuTouch-Lab
+
+summary: Offline-first notes application
+
+description: |
+  MiniNotes is a small offline-first notes application built
+  with Qt, QML, C++ and SQLite.
+
+grade: stable
+confinement: strict
+
+icon: assets/icons/mininotes.svg
+
+apps:
+  mininotes:
+    command: usr/bin/mininotes
+
+    desktop: usr/share/applications/io.github.Ahmad_J_Bary.UbuntuTouch_Lab.desktop
+
+    extensions:
+      - kde-neon-6
+
+    environment:
+      QT_QUICK_BACKEND: software
+      QT_QUICK_CONTROLS_STYLE: Basic
+
+parts:
+  mininotes:
+    plugin: cmake
+
+    source: .
+
+    build-packages:
+      - libqt6sql6-sqlite
+
+    cmake-parameters:
+      - -DCMAKE_BUILD_TYPE=Release
+      - -DCMAKE_INSTALL_PREFIX=/usr
+      - -DMININOTES_BUILD_TESTS=OFF
+      - -DMININOTES_PACKAGE=ON

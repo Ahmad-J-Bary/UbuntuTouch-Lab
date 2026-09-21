@@ -5,12 +5,13 @@
 #include <QString>
 #include <QVariantMap>
 
-class NoteRepository;
+class NoteService;
 class NoteListModel;
 
 class NoteController : public QObject
 {
     Q_OBJECT
+
     Q_PROPERTY(bool saving READ isSaving NOTIFY savingChanged)
     Q_PROPERTY(bool deleting READ isDeleting NOTIFY deletingChanged)
     Q_PROPERTY(QString errorMessage READ errorMessage NOTIFY errorMessageChanged)
@@ -18,7 +19,7 @@ class NoteController : public QObject
     Q_PROPERTY(QAbstractItemModel *notesModel READ notesModel CONSTANT)
 
 public:
-    explicit NoteController(NoteRepository *repository, QObject *parent = nullptr);
+    explicit NoteController(NoteService *service, QObject *parent = nullptr);
 
     bool isSaving() const;
     bool isDeleting() const;
@@ -50,13 +51,12 @@ signals:
 private:
     void setSaving(bool saving);
     void setErrorMessage(const QString &message);
-    bool isValidInput(const QString &title, const QString &body, QString *validationMessage) const;
     void doSave(const QString &title, const QString &body);
     void doUpdate(int id, const QString &title, const QString &body);
     void doDelete(int id);
     void setNoteCount(int count);
 
-    NoteRepository *m_repository;
+    NoteService *m_service;
     NoteListModel *m_notesModel;
     bool m_saving = false;
     bool m_deleting = false;

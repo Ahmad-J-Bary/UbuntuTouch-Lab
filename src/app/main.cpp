@@ -1,14 +1,16 @@
-#include "database.h"
-#include "notecontroller.h"
-#include "noterepository.h"
+#include "data/sqlite/database.h"
+#include "data/sqlite/sqlite_note_repository.h"
+#include "platform/qt/qt_platform_paths.h"
+#include "application/note_service.h"
+#include "presentation/note_controller.h"
 
 #include <QCoreApplication>
+#include <QDir>
 #include <QDebug>
 #include <QFile>
 #include <QGuiApplication>
 #include <QQmlApplicationEngine>
 #include <QQmlContext>
-#include <QStandardPaths>
 #include <QTimer>
 #include <QUrl>
 
@@ -19,6 +21,9 @@ static QString resolveQmlMain()
     const QStringList candidates = {
         appDir + QStringLiteral("/qml/Main.qml"),
         appDir + QStringLiteral("/../qml/Main.qml"),
+        QDir(appDir).filePath(
+            QStringLiteral("../share/mininotes/qml/Main.qml")
+        ),
     };
 
     for (const QString &candidate : candidates) {
@@ -36,21 +41,27 @@ int main(int argc, char *argv[])
 
     QGuiApplication app(argc, argv);
 
-    const QString dataDir =
-        QStandardPaths::writableLocation(QStandardPaths::AppDataLocation);
+    QtPlatformPaths platformPaths;
 
-    const QString effectiveDataDir = dataDir.isEmpty()
-        ? QStandardPaths::writableLocation(QStandardPaths::HomeLocation)
-        : dataDir;
+    QString pathError;
+
+    if (!platformPaths.ensureApplicationDataDirectory(&pathError)) {
+        qWarning().noquote()
+            << QStringLiteral("Application data directory is unavailable: %1")
+                   .arg(pathError);
+    }
+
+    const QString dataDir =
+        platformPaths.applicationDataDirectory();
 
     const QString databasePath =
-        effectiveDataDir + QStringLiteral("/mininotes.db");
+        platformPaths.databasePath();
 
     qInfo().noquote()
         << QStringLiteral("MiniNotes startup: appDir=%1 qml=%2 dataDir=%3 database=%4")
                .arg(QCoreApplication::applicationDirPath(),
                     resolveQmlMain(),
-                    effectiveDataDir,
+                    dataDir,
                     databasePath);
 
     Database database;
@@ -66,8 +77,9 @@ int main(int argc, char *argv[])
                    .arg(dbError);
     }
 
-    NoteRepository repository(&database);
-    NoteController controller(&repository);
+    SqliteNoteRepository repository(&database);
+    NoteService service(&repository);
+    NoteController controller(&service);
     controller.refreshNotes();
 
     QQmlApplicationEngine engine;

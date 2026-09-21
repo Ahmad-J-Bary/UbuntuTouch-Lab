@@ -1,13 +1,11 @@
 name: ubuntu-touch
+run-name: >-
+  ${{ github.event_name == 'push' && startsWith(github.ref, 'refs/tags/v') && format('Release · {0}', github.ref_name) || github.event_name == 'push' && github.event.head_commit.message || format('CI · manual · run {0}', github.run_number) }}
 
 on:
   push:
-    branches: [main]
+    branches: ["**"]
     tags: ["v[0-9]+.[0-9]+.[0-9]+"]
-    paths-ignore:
-      - "README.md"
-      - ".gitignore"
-  pull_request:
     paths-ignore:
       - "README.md"
       - ".gitignore"
@@ -73,17 +71,33 @@ jobs:
 
       - name: Configure + build (host, backend tests)
         run: |
-          cmake -S . -B build/test -DCMAKE_BUILD_TYPE=Release -DMININOTES_BUILD_TESTS=ON
-          cmake --build build/test -j2
+          cmake --preset linux-tests
+          cmake --build --preset linux-tests
 
-      - name: Run backend tests (QTest, expected 10/10)
+      - name: Run backend tests (QTest)
         run: |
-          ctest --test-dir build/test --output-on-failure
+          ctest --preset linux-tests
+
+      - name: Verify architecture boundaries
+        run: |
+          set -euo pipefail
+
+          if grep -RInE '#include[[:space:]]*["<].*(QSql|QSqlDatabase|QSqlQuery|sqlite)' src/domain src/application 2>/dev/null; then
+            echo "::error::Domain/Application layers must not depend on SQLite/QSql"
+            exit 1
+          fi
+
+          if grep -RInE 'SqliteNoteRepository|data/sqlite' src/presentation src/application 2>/dev/null; then
+            echo "::error::Presentation/Application layers must not depend on SqliteNoteRepository"
+            exit 1
+          fi
+
+          echo "Architecture boundaries OK"
 
       - name: Build app (host) for QML E2E
         run: |
-          cmake -S . -B build/app -DCMAKE_BUILD_TYPE=Release
-          cmake --build build/app -j2
+          cmake --preset linux-e2e
+          cmake --build --preset linux-e2e
 
       - name: Headless QML/E2E check
         env:
@@ -92,7 +106,7 @@ jobs:
           MININOTES_E2E_TEST: "1"
         run: |
           set -e
-          timeout 90 ./build/app/mininotes > /tmp/e2e.log 2>&1 || true
+          timeout 90 ./build/linux-e2e/mininotes > /tmp/e2e.log 2>&1 || true
           tail -15 /tmp/e2e.log
           grep -q "AUTOMATION: RESULT PASS" /tmp/e2e.log
 
@@ -169,8 +183,16 @@ jobs:
           rm -rf /tmp/pk && mkdir -p /tmp/pk && dpkg-deb -x "$CLICK_OUT" /tmp/pk
           dpkg-deb -e "$CLICK_OUT" /tmp/pk/DEBIAN
           file /tmp/pk/mininotes | grep -q "ARM aarch64"
-          for f in mininotes qml/Main.qml qml/CreateNotePage.qml qml/NotesListPage.qml \
-                    mininotes.apparmor mininotes.desktop assets/icons/mininotes.svg; do
+          for f in \
+            mininotes \
+            qml/Main.qml \
+            qml/pages/CreateNotePage.qml \
+            qml/pages/EditNotePage.qml \
+            qml/pages/NotesListPage.qml \
+            qml/theme/UiMetrics.qml \
+            mininotes.apparmor \
+            mininotes.desktop \
+            assets/icons/mininotes.svg; do
             test -f "/tmp/pk/$f"
           done
           python3 -c "import json; json.load(open('/tmp/pk/mininotes.apparmor'))"
@@ -187,36 +209,318 @@ jobs:
           if-no-files-found: error
           retention-days: 30
 
-  release:
-    needs: build
+  linux_release:
     if: startsWith(github.ref, 'refs/tags/v')
     runs-on: ubuntu-24.04
-    permissions:
-      contents: write
+    timeout-minutes: 20
+
     steps:
       - name: Checkout
         uses: actions/checkout@v4
 
-      - name: Download .click artifact
+      - name: Install Linux Qt build dependencies
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y --no-install-recommends \
+            cmake \
+            qt6-base-dev \
+            qt6-declarative-dev \
+            qml6-module-qtquick \
+            qml6-module-qtquick-window \
+            qml6-module-qtquick-controls \
+            qml6-module-qtquick-templates \
+            qml6-module-qtquick-layouts \
+            qml6-module-qtqml-workerscript \
+            libqt6sql6-sqlite
+
+      - name: Build Linux Desktop release
+        run: |
+          cmake --preset linux-release
+          cmake --build --preset linux-release
+
+          test -x build/linux-release/mininotes
+
+      - name: Package Linux Desktop
+        env:
+          VERSION: ${{ github.ref_name }}
+        run: |
+          set -euxo pipefail
+
+          VERSION="${VERSION#v}"
+          PACKAGE_DIR="mininotes-${VERSION}-linux-x86_64"
+          ARCHIVE="mininotes-${VERSION}-linux-x86_64.tar.gz"
+
+          rm -rf "dist/$PACKAGE_DIR"
+          mkdir -p "dist/$PACKAGE_DIR"
+
+          cp build/linux-release/mininotes \
+             "dist/$PACKAGE_DIR/"
+
+          cp -R build/linux-release/qml \
+             "dist/$PACKAGE_DIR/"
+
+          mkdir -p \
+            "dist/$PACKAGE_DIR/assets/icons"
+
+          cp assets/icons/mininotes.svg \
+             "dist/$PACKAGE_DIR/assets/icons/"
+
+          cp mininotes.desktop \
+             "dist/$PACKAGE_DIR/"
+
+          cat > "dist/$PACKAGE_DIR/README.txt" <<EOF
+          MiniNotes ${VERSION}
+          Linux x86_64 desktop build
+
+          Run:
+            ./mininotes
+
+          Runtime:
+            Qt 6
+            SQLite
+
+          The application stores its data using the operating system's
+          application data location.
+          EOF
+
+          tar -C dist \
+            -czf "dist/$ARCHIVE" \
+            "$PACKAGE_DIR"
+
+          test -f "dist/$ARCHIVE"
+          ls -lh "dist/$ARCHIVE"
+
+      - name: Upload Linux release artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: mininotes-linux-x86_64
+          path: dist/mininotes-*-linux-x86_64.tar.gz
+          if-no-files-found: error
+          retention-days: 30
+
+
+  linux_deb:
+    if: startsWith(github.ref, 'refs/tags/v') || github.event_name == 'workflow_dispatch'
+    runs-on: ubuntu-24.04
+    timeout-minutes: 20
+    outputs:
+      version: ${{ steps.detect_version.outputs.version }}
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Detect application version
+        id: detect_version
+        run: |
+          set -euo pipefail
+
+          VERSION="$(sed -nE 's/^project\(mininotes VERSION ([0-9.]+).*/\1/p' CMakeLists.txt)"
+
+          test -n "$VERSION"
+
+          if [[ "$GITHUB_REF_NAME" =~ ^v[0-9]+\.[0-9]+\.[0-9]+$ ]]; then
+            TAG_VERSION="${GITHUB_REF_NAME#v}"
+
+            if [[ "$TAG_VERSION" != "$VERSION" ]]; then
+              echo "::error::tag $GITHUB_REF_NAME does not match application version $VERSION"
+              exit 1
+            fi
+          fi
+
+          echo "version=$VERSION" >> "$GITHUB_OUTPUT"
+
+      - name: Install Linux packaging dependencies
+        run: |
+          sudo apt-get update
+
+          sudo apt-get install -y --no-install-recommends \
+            cmake \
+            dpkg-dev \
+            fakeroot \
+            qt6-base-dev \
+            qt6-declarative-dev \
+            qml6-module-qtquick \
+            qml6-module-qtquick-window \
+            qml6-module-qtquick-controls \
+            qml6-module-qtquick-templates \
+            qml6-module-qtquick-layouts \
+            qml6-module-qtqml-workerscript \
+            libqt6sql6-sqlite
+
+      - name: Configure Linux package build
+        run: |
+          cmake --preset linux-package
+
+      - name: Build Linux package target
+        run: |
+          cmake --build --preset linux-package
+
+      - name: Build DEB package
+        run: |
+          set -euxo pipefail
+
+          cpack \
+            --config build/linux-package/CPackConfig.cmake \
+            -G DEB
+
+          DEB="$(find . \
+            -maxdepth 1 \
+            -type f \
+            -name 'mininotes_*.deb' \
+            -print -quit)"
+
+          test -n "$DEB"
+
+          mkdir -p dist
+
+          cp "$DEB" \
+            "dist/mininotes_${{ steps.detect_version.outputs.version }}_amd64.deb"
+
+          echo "===== DEB INFO ====="
+          dpkg-deb -I "$DEB"
+
+          echo "===== DEB CONTENTS ====="
+          dpkg-deb -c "$DEB" | grep -E \
+            '(/usr/bin/mininotes|/usr/share/mininotes|applications/|icons/|metainfo/)'
+
+      - name: Upload DEB artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: mininotes-linux-amd64-deb
+          path: dist/mininotes_*_amd64.deb
+          if-no-files-found: error
+          retention-days: 30
+
+
+  linux_snap:
+    if: startsWith(github.ref, 'refs/tags/v') || github.event_name == 'workflow_dispatch'
+    runs-on: ubuntu-24.04
+    timeout-minutes: 40
+
+    outputs:
+      version: ${{ steps.detect_version.outputs.version }}
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Detect application version
+        id: detect_version
+        run: |
+          set -euo pipefail
+
+          VERSION="$(sed -nE 's/^project\(mininotes VERSION ([0-9.]+).*/\1/p' CMakeLists.txt)"
+
+          test -n "$VERSION"
+
+          if [[ "$GITHUB_REF_NAME" =~ ^v[0-9]+\.[0-9]+\.[0-9]+$ ]]; then
+            TAG_VERSION="${GITHUB_REF_NAME#v}"
+
+            if [[ "$TAG_VERSION" != "$VERSION" ]]; then
+              echo "::error::tag $GITHUB_REF_NAME does not match application version $VERSION"
+              exit 1
+            fi
+          fi
+
+          echo "version=$VERSION" >> "$GITHUB_OUTPUT"
+
+      - name: Build Snap
+        id: snapcraft
+        uses: snapcore/action-build@v1
+
+      - name: Normalize Snap filename
+        run: |
+          set -euxo pipefail
+
+          VERSION="${{ steps.detect_version.outputs.version }}"
+
+          mkdir -p dist
+
+          cp "${{ steps.snapcraft.outputs.snap }}" \
+            "dist/mininotes_${VERSION}_amd64.snap"
+
+          ls -lh dist/mininotes_${VERSION}_amd64.snap
+
+      - name: Inspect Snap metadata
+        run: |
+          set -euxo pipefail
+
+          SNAP="dist/mininotes_${{ steps.detect_version.outputs.version }}_amd64.snap"
+
+          snap info "$SNAP" || true
+          file "$SNAP"
+
+      - name: Upload Snap artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: mininotes-linux-amd64-snap
+          path: dist/mininotes_*_amd64.snap
+          if-no-files-found: error
+          retention-days: 30
+
+  release:
+    needs:
+      - build
+      - linux_release
+      - linux_deb
+      - linux_snap
+    if: startsWith(github.ref, 'refs/tags/v')
+    runs-on: ubuntu-24.04
+    permissions:
+      contents: write
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Download Ubuntu Touch artifact
         uses: actions/download-artifact@v4
         with:
           name: mininotes-ubuntu-touch-arm64
-          path: dist
+          path: dist/ubuntu-touch
 
-      - name: Create GitHub Release
+      - name: Download Linux Desktop artifact
+        uses: actions/download-artifact@v4
+        with:
+          name: mininotes-linux-x86_64
+          path: dist/linux
+
+      - name: Download Linux DEB artifact
+        uses: actions/download-artifact@v4
+        with:
+          name: mininotes-linux-amd64-deb
+          path: dist/deb
+
+      - name: Download Linux Snap artifact
+        uses: actions/download-artifact@v4
+        with:
+          name: mininotes-linux-amd64-snap
+          path: dist/snap
+
+      - name: Create or update GitHub Release
         env:
           GH_TOKEN: ${{ github.token }}
         run: |
           set -euxo pipefail
+
           VERSION="${{ needs.build.outputs.version }}"
           TAG="$GITHUB_REF_NAME"
+
           test "$TAG" = "v${VERSION}"
-          CLICK_FILE="dist/mininotes_${VERSION}_arm64.click"
+
+          CLICK_FILE="dist/ubuntu-touch/mininotes_${VERSION}_arm64.click"
+          LINUX_FILE="dist/linux/mininotes-${VERSION}-linux-x86_64.tar.gz"
+          DEB_FILE="dist/deb/mininotes_${VERSION}_amd64.deb"
+          SNAP_FILE="dist/snap/mininotes_${VERSION}_amd64.snap"
+
           test -f "$CLICK_FILE"
+          test -f "$LINUX_FILE"
+          test -f "$DEB_FILE"
+          test -f "$SNAP_FILE"
+
           cat > release-notes.md <<EOF
           # MiniNotes $TAG
-
-          First experimental Ubuntu Touch release.
 
           ## Features
 
@@ -226,16 +530,38 @@ jobs:
           - QML/Qt6 UI
           - UTF-8 / Arabic / emoji support
 
-          ## Target
+          ## Targets
 
-          - Ubuntu Touch 24.04-1.x
-          - ARM64
+          - Ubuntu Touch 24.04-1.x / ARM64
+          - Linux desktop / x86_64
+
+          ## Artifacts
+
+          - mininotes_${VERSION}_arm64.click
+          - mininotes-${VERSION}-linux-x86_64.tar.gz
+          - mininotes_${VERSION}_amd64.deb
+          - mininotes_${VERSION}_amd64.snap
 
           ## Experimental status
 
-          This is the first experimental release.
+          This is an experimental development release.
           EOF
-          gh release create "$TAG" "$CLICK_FILE" \
-            --repo "$GITHUB_REPOSITORY" \
-            --title "MiniNotes $TAG" \
-            --notes-file release-notes.md
+
+          if gh release view "$TAG" --repo "$GITHUB_REPOSITORY" >/dev/null 2>&1; then
+            gh release upload "$TAG" \
+              "$CLICK_FILE" \
+              "$LINUX_FILE" \
+              "$DEB_FILE" \
+              "$SNAP_FILE" \
+              --repo "$GITHUB_REPOSITORY" \
+              --clobber
+          else
+            gh release create "$TAG" \
+              "$CLICK_FILE" \
+              "$LINUX_FILE" \
+              "$DEB_FILE" \
+              "$SNAP_FILE" \
+              --repo "$GITHUB_REPOSITORY" \
+              --title "MiniNotes $TAG" \
+              --notes-file release-notes.md
+          fi

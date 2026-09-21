@@ -1,4 +1,4 @@
-#include "notelistmodel.h"
+#include "note_list_model.h"
 
 NoteListModel::NoteListModel(QObject *parent)
     : QAbstractListModel(parent)

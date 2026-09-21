@@ -1,0 +1,97 @@
+{
+    "version": 3,
+    "cmakeMinimumRequired": {
+        "major": 3,
+        "minor": 21,
+        "patch": 0
+    },
+    "configurePresets": [
+        {
+            "name": "linux-base",
+            "hidden": true,
+            "generator": "Unix Makefiles",
+            "binaryDir": "${sourceDir}/build/${presetName}",
+            "cacheVariables": {
+                "CMAKE_EXPORT_COMPILE_COMMANDS": "ON"
+            }
+        },
+        {
+            "name": "linux-debug",
+            "inherits": "linux-base",
+            "description": "Linux Debug build",
+            "cacheVariables": {
+                "CMAKE_BUILD_TYPE": "Debug",
+                "MININOTES_BUILD_TESTS": "OFF"
+            }
+        },
+        {
+            "name": "linux-release",
+            "inherits": "linux-base",
+            "description": "Linux Release build",
+            "cacheVariables": {
+                "CMAKE_BUILD_TYPE": "Release",
+                "MININOTES_BUILD_TESTS": "OFF"
+            }
+        },
+        {
+            "name": "linux-tests",
+            "inherits": "linux-base",
+            "description": "Linux Debug build with backend tests",
+            "cacheVariables": {
+                "CMAKE_BUILD_TYPE": "Debug",
+                "MININOTES_BUILD_TESTS": "ON"
+            }
+        },
+        {
+            "name": "linux-e2e",
+            "inherits": "linux-base",
+            "description": "Linux Debug build for QML E2E testing",
+            "cacheVariables": {
+                "CMAKE_BUILD_TYPE": "Debug",
+                "MININOTES_BUILD_TESTS": "OFF"
+            }
+        },
+        {
+            "name": "linux-package",
+            "inherits": "linux-base",
+            "description": "Linux Release build with standard installation/package layout",
+            "cacheVariables": {
+                "CMAKE_BUILD_TYPE": "Release",
+                "CMAKE_INSTALL_PREFIX": "/usr",
+                "MININOTES_BUILD_TESTS": "OFF",
+                "MININOTES_PACKAGE": "ON"
+            }
+        }
+    ],
+    "buildPresets": [
+        {
+            "name": "linux-debug",
+            "configurePreset": "linux-debug"
+        },
+        {
+            "name": "linux-release",
+            "configurePreset": "linux-release"
+        },
+        {
+            "name": "linux-tests",
+            "configurePreset": "linux-tests"
+        },
+        {
+            "name": "linux-e2e",
+            "configurePreset": "linux-e2e"
+        },
+        {
+            "name": "linux-package",
+            "configurePreset": "linux-package"
+        }
+    ],
+    "testPresets": [
+        {
+            "name": "linux-tests",
+            "configurePreset": "linux-tests",
+            "output": {
+                "outputOnFailure": true
+            }
+        }
+    ]
+}

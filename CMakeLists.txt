@@ -1,28 +1,36 @@
 cmake_minimum_required(VERSION 3.16)
-project(mininotes VERSION 0.2.4 LANGUAGES CXX)
+project(mininotes VERSION 0.2.5 LANGUAGES CXX)
 
 set(CMAKE_CXX_STANDARD 17)
 set(CMAKE_CXX_STANDARD_REQUIRED ON)
 set(CMAKE_AUTOMOC ON)
 
+include(GNUInstallDirs)
+
 find_package(QT NAMES Qt6 Qt5 REQUIRED COMPONENTS Core)
 find_package(Qt${QT_VERSION_MAJOR} REQUIRED COMPONENTS Core Gui Sql Qml Quick)
 
 set(MININOTES_SOURCES
-    src/database.cpp
-    src/noterepository.cpp
-    src/notecontroller.cpp
-    src/notelistmodel.cpp)
+    src/platform/qt/qt_platform_paths.cpp
+    src/application/note_service.cpp
+    src/data/sqlite/database.cpp
+    src/data/sqlite/sqlite_note_repository.cpp
+    src/presentation/note_controller.cpp
+    src/presentation/note_list_model.cpp)
 
 set(MININOTES_HEADERS
-    src/note.h
-    src/database.h
-    src/noterepository.h
-    src/notecontroller.h
-    src/notelistmodel.h)
+    src/platform/platform_paths.h
+    src/platform/qt/qt_platform_paths.h
+    src/application/note_service.h
+    src/domain/note.h
+    src/domain/inote_repository.h
+    src/data/sqlite/database.h
+    src/data/sqlite/sqlite_note_repository.h
+    src/presentation/note_controller.h
+    src/presentation/note_list_model.h)
 
 add_executable(mininotes
-    src/main.cpp
+    src/app/main.cpp
     ${MININOTES_SOURCES}
     ${MININOTES_HEADERS})
 
@@ -37,13 +45,73 @@ target_link_libraries(mininotes PRIVATE
 
 configure_file(manifest.json.in ${CMAKE_CURRENT_BINARY_DIR}/manifest.json)
 
-install(TARGETS mininotes RUNTIME DESTINATION ${CMAKE_INSTALL_PREFIX})
-install(DIRECTORY ${CMAKE_CURRENT_SOURCE_DIR}/qml DESTINATION ${CMAKE_INSTALL_PREFIX})
-install(FILES ${CMAKE_CURRENT_BINARY_DIR}/manifest.json DESTINATION ${CMAKE_INSTALL_PREFIX})
-install(FILES ${CMAKE_CURRENT_SOURCE_DIR}/mininotes.apparmor DESTINATION ${CMAKE_INSTALL_PREFIX})
-install(FILES ${CMAKE_CURRENT_SOURCE_DIR}/mininotes.desktop DESTINATION ${CMAKE_INSTALL_PREFIX})
-install(FILES ${CMAKE_CURRENT_SOURCE_DIR}/assets/icons/mininotes.svg
-    DESTINATION ${CMAKE_INSTALL_PREFIX}/assets/icons)
+option(
+    MININOTES_PACKAGE
+    "Enable standard Linux desktop installation/package layout"
+    OFF
+)
+
+if(MININOTES_PACKAGE)
+    install(
+        TARGETS mininotes
+        RUNTIME DESTINATION ${CMAKE_INSTALL_BINDIR}
+    )
+
+    install(
+        DIRECTORY ${CMAKE_CURRENT_SOURCE_DIR}/qml/
+        DESTINATION ${CMAKE_INSTALL_DATADIR}/mininotes/qml
+    )
+
+    install(
+        FILES
+            ${CMAKE_CURRENT_SOURCE_DIR}/packaging/appstream/io.github.Ahmad_J_Bary.UbuntuTouch_Lab.desktop
+        DESTINATION ${CMAKE_INSTALL_DATADIR}/applications
+    )
+
+    install(
+        FILES
+            ${CMAKE_CURRENT_SOURCE_DIR}/packaging/appstream/io.github.Ahmad_J_Bary.UbuntuTouch_Lab.metainfo.xml
+        DESTINATION ${CMAKE_INSTALL_DATADIR}/metainfo
+    )
+
+    install(
+        FILES
+            ${CMAKE_CURRENT_SOURCE_DIR}/assets/icons/mininotes.svg
+        DESTINATION ${CMAKE_INSTALL_DATADIR}/icons/hicolor/scalable/apps
+        RENAME io.github.Ahmad_J_Bary.UbuntuTouch_Lab.svg
+    )
+
+    set(CPACK_PACKAGE_NAME "mininotes")
+    set(CPACK_PACKAGE_VENDOR "MiniNotes Developers")
+    set(CPACK_PACKAGE_CONTACT "MiniNotes Developers")
+    set(CPACK_PACKAGE_DESCRIPTION_SUMMARY
+        "Offline-first notes application"
+    )
+    set(CPACK_PACKAGE_VERSION ${PROJECT_VERSION})
+    set(CPACK_PACKAGE_INSTALL_DIRECTORY "MiniNotes")
+
+    set(CPACK_DEBIAN_PACKAGE_MAINTAINER "MiniNotes Developers")
+    set(CPACK_DEBIAN_PACKAGE_SECTION "utils")
+    set(CPACK_DEBIAN_PACKAGE_SHLIBDEPS ON)
+    set(
+        CPACK_DEBIAN_PACKAGE_DEPENDS
+        "libqt6sql6-sqlite, qml6-module-qtquick, qml6-module-qtquick-controls, qml6-module-qtquick-layouts, qml6-module-qtquick-window"
+    )
+
+    set(CPACK_DEBIAN_FILE_NAME DEB-DEFAULT)
+    set(CPACK_STRIP_FILES ON)
+    set(CPACK_GENERATOR DEB)
+
+    include(CPack)
+else()
+    install(TARGETS mininotes RUNTIME DESTINATION ${CMAKE_INSTALL_PREFIX})
+    install(DIRECTORY ${CMAKE_CURRENT_SOURCE_DIR}/qml DESTINATION ${CMAKE_INSTALL_PREFIX})
+    install(FILES ${CMAKE_CURRENT_BINARY_DIR}/manifest.json DESTINATION ${CMAKE_INSTALL_PREFIX})
+    install(FILES ${CMAKE_CURRENT_SOURCE_DIR}/mininotes.apparmor DESTINATION ${CMAKE_INSTALL_PREFIX})
+    install(FILES ${CMAKE_CURRENT_SOURCE_DIR}/mininotes.desktop DESTINATION ${CMAKE_INSTALL_PREFIX})
+    install(FILES ${CMAKE_CURRENT_SOURCE_DIR}/assets/icons/mininotes.svg
+        DESTINATION ${CMAKE_INSTALL_PREFIX}/assets/icons)
+endif()
 
 add_custom_command(TARGET mininotes POST_BUILD
     COMMAND ${CMAKE_COMMAND} -E copy_directory
@@ -68,4 +136,35 @@ if(MININOTES_BUILD_TESTS)
         Qt${QT_VERSION_MAJOR}::Test)
 
     add_test(NAME mininotes_backend_test COMMAND mininotes_backend_test)
+
+    add_executable(mininotes_service_test
+        tests/tst_note_service.cpp
+        src/application/note_service.cpp
+        src/application/note_service.h
+        src/domain/note.h
+        src/domain/inote_repository.h)
+
+    target_include_directories(mininotes_service_test PRIVATE
+        ${CMAKE_CURRENT_SOURCE_DIR}/src)
+
+    target_link_libraries(mininotes_service_test PRIVATE
+        Qt${QT_VERSION_MAJOR}::Core
+        Qt${QT_VERSION_MAJOR}::Test)
+
+    add_test(NAME mininotes_service_test COMMAND mininotes_service_test)
+
+    add_executable(mininotes_platform_test
+        tests/tst_platform_paths.cpp
+        src/platform/qt/qt_platform_paths.cpp
+        src/platform/qt/qt_platform_paths.h
+        src/platform/platform_paths.h)
+
+    target_include_directories(mininotes_platform_test PRIVATE
+        ${CMAKE_CURRENT_SOURCE_DIR}/src)
+
+    target_link_libraries(mininotes_platform_test PRIVATE
+        Qt${QT_VERSION_MAJOR}::Core
+        Qt${QT_VERSION_MAJOR}::Test)
+
+    add_test(NAME mininotes_platform_test COMMAND mininotes_platform_test)
 endif()
