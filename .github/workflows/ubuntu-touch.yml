@@ -31,6 +31,8 @@ jobs:
     steps:
       - name: Checkout
         uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
 
       - name: Detect application version (single source = CMakeLists.txt)
         id: detect_version
@@ -107,6 +109,137 @@ jobs:
           timeout 90 ./build/linux-e2e/mininotes > /tmp/e2e.log 2>&1 || true
           tail -15 /tmp/e2e.log
           grep -q "AUTOMATION: RESULT PASS" /tmp/e2e.log
+
+      - name: Generate release notes
+        if: startsWith(github.ref, 'refs/tags/v')
+        run: |
+          set -euo pipefail
+
+          CURRENT_TAG="$GITHUB_REF_NAME"
+          CURRENT_SHA="$GITHUB_SHA"
+
+          PREVIOUS_TAG="$(
+            git describe \
+              --tags \
+              --abbrev=0 \
+              "${CURRENT_SHA}^" \
+              2>/dev/null || true
+          )"
+
+          PREVIOUS_TAG="${PREVIOUS_TAG:-}"
+
+          python3 - "$CURRENT_TAG" "$CURRENT_SHA" "$PREVIOUS_TAG" <<'PY'
+          import re
+          import subprocess
+          import sys
+          from pathlib import Path
+
+          current_tag = sys.argv[1]
+          current_sha = sys.argv[2]
+          previous_tag = sys.argv[3]
+
+          if previous_tag:
+              revision_range = f"{previous_tag}..{current_sha}"
+          else:
+              revision_range = current_sha
+
+          result = subprocess.run(
+              [
+                  "git",
+                  "log",
+                  "--first-parent",
+                  "--no-merges",
+                  "--format=%s",
+                  revision_range,
+              ],
+              check=True,
+              capture_output=True,
+              text=True,
+          )
+
+          subjects = [
+              line.strip()
+              for line in result.stdout.splitlines()
+              if line.strip()
+          ]
+
+          features = []
+          fixes = []
+          improvements = []
+          other = []
+
+          conventional = re.compile(
+              r"^(?P<type>[a-zA-Z]+)(?:\([^)]*\))?!?:\s*(?P<subject>.+)$"
+          )
+
+          for subject in subjects:
+              match = conventional.match(subject)
+
+              if match:
+                  kind = match.group("type").lower()
+                  text = match.group("subject").strip()
+
+                  if kind == "feat":
+                      features.append(text)
+                  elif kind == "fix":
+                      fixes.append(text)
+                  elif kind in {"refactor", "perf", "ui", "ux"}:
+                      improvements.append(text)
+                  elif kind in {
+                      "chore",
+                      "ci",
+                      "docs",
+                      "test",
+                      "build",
+                      "style",
+                  }:
+                      other.append(text)
+                  else:
+                      other.append(subject)
+              else:
+                  other.append(subject)
+
+          lines = ["## Changes", ""]
+
+          def add_section(title, items):
+              if not items:
+                  return
+              lines.extend([f"### {title}", ""])
+              for item in items:
+                  lines.append(f"- {item}")
+              lines.append("")
+
+          add_section("Features", features)
+          add_section("Fixes", fixes)
+          add_section("Improvements", improvements)
+
+          add_section("Other Changes", other)
+
+          if not (features or fixes or improvements or other):
+              lines.extend([
+                  "No changes were recorded in the commit history for this release.",
+                  "",
+              ])
+
+          Path("release-notes.md").write_text(
+              "\n".join(lines).rstrip() + "\n",
+              encoding="utf-8",
+          )
+
+          print(f"Current tag:  {current_tag}")
+          print(f"Previous tag: {previous_tag or '(none)'}")
+          print()
+          print(Path("release-notes.md").read_text(encoding="utf-8"))
+          PY
+
+      - name: Upload generated release notes
+        if: startsWith(github.ref, 'refs/tags/v')
+        uses: actions/upload-artifact@v4
+        with:
+          name: mininotes-release-notes
+          path: release-notes.md
+          if-no-files-found: error
+          retention-days: 30
 
   ubuntu_touch:
     needs:
@@ -294,6 +427,13 @@ jobs:
           if-no-files-found: error
           retention-days: 30
 
+      - name: Download generated release notes
+        if: startsWith(github.ref, 'refs/tags/v')
+        uses: actions/download-artifact@v4
+        with:
+          name: mininotes-release-notes
+          path: .ci/release-notes
+
       - name: Publish Click to OpenStore
         if: startsWith(github.ref, 'refs/tags/v')
         env:
@@ -307,7 +447,18 @@ jobs:
             exit 1
           }
 
-          clickable publish --arch "$ARCH"
+          if [[ "$ARCH" == "arm64" ]]; then
+            CHANGELOG="$(cat .ci/release-notes/release-notes.md)"
+
+            test -n "$CHANGELOG"
+
+            echo "Publishing OpenStore changelog:"
+            printf '%s\n' "$CHANGELOG"
+
+            clickable publish --arch "$ARCH" "$CHANGELOG"
+          else
+            clickable publish --arch "$ARCH"
+          fi
 
   linux_release:
     if: startsWith(github.ref, 'refs/tags/v')
@@ -591,6 +742,12 @@ jobs:
           path: dist/ubuntu-touch
           merge-multiple: true
 
+      - name: Download generated release notes
+        uses: actions/download-artifact@v4
+        with:
+          name: mininotes-release-notes
+          path: dist/release-notes
+
       - name: Download Linux Desktop artifact
         uses: actions/download-artifact@v4
         with:
@@ -634,37 +791,7 @@ jobs:
           test -f "$DEB_FILE"
           test -f "$SNAP_FILE"
 
-          cat > release-notes.md <<EOF
-          # MiniNotes $TAG
-
-          ## Features
-
-          - Create Note
-          - SQLite persistence
-          - C++ backend
-          - QML/Qt6 UI
-          - UTF-8 / Arabic / emoji support
-
-          ## Targets
-
-          - Ubuntu Touch 24.04-1.x / ARM64
-          - Ubuntu Touch 24.04-1.x / ARMHF
-          - Ubuntu Touch 24.04-1.x / AMD64
-          - Linux desktop / x86_64
-
-          ## Artifacts
-
-          - mininotes_${VERSION}_arm64.click
-          - mininotes_${VERSION}_armhf.click
-          - mininotes_${VERSION}_amd64.click
-          - mininotes-${VERSION}-linux-x86_64.tar.gz
-          - mininotes_${VERSION}_amd64.deb
-          - mininotes_${VERSION}_amd64.snap
-
-          ## Experimental status
-
-          This is an experimental development release.
-          EOF
+          cp dist/release-notes/release-notes.md release-notes.md
 
           if gh release view "$TAG" --repo "$GITHUB_REPOSITORY" >/dev/null 2>&1; then
             gh release upload "$TAG" \
