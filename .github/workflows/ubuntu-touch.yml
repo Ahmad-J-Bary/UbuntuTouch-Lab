@@ -392,11 +392,79 @@ jobs:
           if-no-files-found: error
           retention-days: 30
 
+
+  linux_snap:
+    if: startsWith(github.ref, 'refs/tags/v') || github.event_name == 'workflow_dispatch'
+    runs-on: ubuntu-24.04
+    timeout-minutes: 40
+
+    outputs:
+      version: ${{ steps.detect_version.outputs.version }}
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Detect application version
+        id: detect_version
+        run: |
+          set -euo pipefail
+
+          VERSION="$(sed -nE 's/^project\(mininotes VERSION ([0-9.]+).*/\1/p' CMakeLists.txt)"
+
+          test -n "$VERSION"
+
+          if [[ "$GITHUB_REF_NAME" =~ ^v[0-9]+\.[0-9]+\.[0-9]+$ ]]; then
+            TAG_VERSION="${GITHUB_REF_NAME#v}"
+
+            if [[ "$TAG_VERSION" != "$VERSION" ]]; then
+              echo "::error::tag $GITHUB_REF_NAME does not match application version $VERSION"
+              exit 1
+            fi
+          fi
+
+          echo "version=$VERSION" >> "$GITHUB_OUTPUT"
+
+      - name: Build Snap
+        id: snapcraft
+        uses: snapcore/action-build@v1
+
+      - name: Normalize Snap filename
+        run: |
+          set -euxo pipefail
+
+          VERSION="${{ steps.detect_version.outputs.version }}"
+
+          mkdir -p dist
+
+          cp "${{ steps.snapcraft.outputs.snap }}" \
+            "dist/mininotes_${VERSION}_amd64.snap"
+
+          ls -lh dist/mininotes_${VERSION}_amd64.snap
+
+      - name: Inspect Snap metadata
+        run: |
+          set -euxo pipefail
+
+          SNAP="dist/mininotes_${{ steps.detect_version.outputs.version }}_amd64.snap"
+
+          snap info "$SNAP" || true
+          file "$SNAP"
+
+      - name: Upload Snap artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: mininotes-linux-amd64-snap
+          path: dist/mininotes_*_amd64.snap
+          if-no-files-found: error
+          retention-days: 30
+
   release:
     needs:
       - build
       - linux_release
       - linux_deb
+      - linux_snap
     if: startsWith(github.ref, 'refs/tags/v')
     runs-on: ubuntu-24.04
     permissions:
@@ -424,6 +492,12 @@ jobs:
           name: mininotes-linux-amd64-deb
           path: dist/deb
 
+      - name: Download Linux Snap artifact
+        uses: actions/download-artifact@v4
+        with:
+          name: mininotes-linux-amd64-snap
+          path: dist/snap
+
       - name: Create or update GitHub Release
         env:
           GH_TOKEN: ${{ github.token }}
@@ -438,10 +512,12 @@ jobs:
           CLICK_FILE="dist/ubuntu-touch/mininotes_${VERSION}_arm64.click"
           LINUX_FILE="dist/linux/mininotes-${VERSION}-linux-x86_64.tar.gz"
           DEB_FILE="dist/deb/mininotes_${VERSION}_amd64.deb"
+          SNAP_FILE="dist/snap/mininotes_${VERSION}_amd64.snap"
 
           test -f "$CLICK_FILE"
           test -f "$LINUX_FILE"
           test -f "$DEB_FILE"
+          test -f "$SNAP_FILE"
 
           cat > release-notes.md <<EOF
           # MiniNotes $TAG
@@ -464,6 +540,7 @@ jobs:
           - mininotes_${VERSION}_arm64.click
           - mininotes-${VERSION}-linux-x86_64.tar.gz
           - mininotes_${VERSION}_amd64.deb
+          - mininotes_${VERSION}_amd64.snap
 
           ## Experimental status
 
@@ -475,6 +552,7 @@ jobs:
               "$CLICK_FILE" \
               "$LINUX_FILE" \
               "$DEB_FILE" \
+              "$SNAP_FILE" \
               --repo "$GITHUB_REPOSITORY" \
               --clobber
           else
@@ -482,6 +560,7 @@ jobs:
               "$CLICK_FILE" \
               "$LINUX_FILE" \
               "$DEB_FILE" \
+              "$SNAP_FILE" \
               --repo "$GITHUB_REPOSITORY" \
               --title "MiniNotes $TAG" \
               --notes-file release-notes.md
