@@ -4,8 +4,9 @@ base: core24
 
 adopt-info: mininotes
 title: MiniNotes
+license: MIT
 contact:
-  - https://github.com/Ahmad-J-Bary/UbuntuTouch-Lab
+  - https://t.me/Ahmad_Abdelbary
 issues:
   - https://github.com/Ahmad-J-Bary/UbuntuTouch-Lab/issues
 source-code:
