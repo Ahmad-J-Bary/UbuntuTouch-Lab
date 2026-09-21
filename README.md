@@ -6,7 +6,7 @@ The project originally started as a native Ubuntu Touch application and is now b
 
 | Item | Current state |
 | --- | --- |
-| Development version | **0.2.5** |
+| Development version | **0.2.6** |
 | Status | **Experimental / Development** |
 | Current OpenStore release | **0.2.5** |
 | Ubuntu Touch target | `ubuntu-touch-24.04-1.x` / ARM64 |
@@ -37,7 +37,7 @@ The main goals are:
 
 ---
 
-# Current status — 0.2.5
+# Current status — 0.2.6
 
 MiniNotes currently provides a complete local note workflow:
 
@@ -834,12 +834,12 @@ vMAJOR.MINOR.PATCH
 For example:
 
 ```text
-v0.2.5
+v0.2.6
 ```
 
-The release pipeline currently creates the Ubuntu Touch GitHub Release and attaches the `.click` package.
+The release pipeline automatically builds and publishes the Ubuntu Touch ARM64 `.click`, Linux x86_64 `.tar.gz`, Linux AMD64 `.deb`, and Linux AMD64 `.snap` artifacts to the corresponding GitHub Release.
 
-Linux desktop release artifact publication is the next CI/CD extension.
+Release artifacts are generated automatically from version tags by GitHub Actions.
 
 ---
 
