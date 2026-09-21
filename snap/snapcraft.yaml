@@ -2,7 +2,7 @@ name: mininotes
 
 base: core24
 
-version: git
+adopt-info: mininotes
 title: MiniNotes
 contact:
   - https://github.com/Ahmad-J-Bary/UbuntuTouch-Lab
@@ -42,6 +42,15 @@ parts:
     plugin: cmake
 
     source: .
+
+    override-pull: |
+      craftctl default
+
+      VERSION="$(sed -nE 's/^project\(mininotes VERSION ([0-9.]+).*/\1/p' "$CRAFT_PART_SRC/CMakeLists.txt")"
+
+      test -n "$VERSION"
+
+      craftctl set version="$VERSION"
 
     build-packages:
       - libqt6sql6-sqlite
