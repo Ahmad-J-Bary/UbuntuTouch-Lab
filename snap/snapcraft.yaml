@@ -8,11 +8,11 @@ license: MIT
 contact:
   - https://t.me/Ahmad_Abdelbary
 issues:
-  - https://github.com/Ahmad-J-Bary/UbuntuTouch-Lab/issues
+  - https://github.com/ahmadabdelbary2001/mininote/issues
 source-code:
-  - https://github.com/Ahmad-J-Bary/UbuntuTouch-Lab
+  - https://github.com/ahmadabdelbary2001/mininote
 website:
-  - https://github.com/Ahmad-J-Bary/UbuntuTouch-Lab
+  - https://github.com/ahmadabdelbary2001/mininote
 
 summary: Offline-first notes application
 
@@ -29,7 +29,7 @@ apps:
   mininotes:
     command: usr/bin/mininotes
 
-    desktop: usr/share/applications/io.github.Ahmad_J_Bary.UbuntuTouch_Lab.desktop
+    desktop: usr/share/applications/io.github.ahmadabdelbary2001.mininote.desktop
 
     extensions:
       - kde-neon-6

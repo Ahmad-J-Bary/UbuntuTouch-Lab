@@ -71,13 +71,13 @@ if(MININOTES_PACKAGE)
     if(MININOTES_FLATPAK)
         install(
             FILES
-                ${CMAKE_CURRENT_SOURCE_DIR}/packaging/flatpak/io.github.Ahmad_J_Bary.UbuntuTouch-Lab.desktop
+                ${CMAKE_CURRENT_SOURCE_DIR}/packaging/flatpak/io.github.ahmadabdelbary2001.mininote.desktop
             DESTINATION ${CMAKE_INSTALL_DATADIR}/applications
         )
 
         install(
             FILES
-                ${CMAKE_CURRENT_SOURCE_DIR}/packaging/flatpak/io.github.Ahmad_J_Bary.UbuntuTouch-Lab.metainfo.xml
+                ${CMAKE_CURRENT_SOURCE_DIR}/packaging/flatpak/io.github.ahmadabdelbary2001.mininote.metainfo.xml
             DESTINATION ${CMAKE_INSTALL_DATADIR}/metainfo
         )
 
@@ -85,24 +85,24 @@ if(MININOTES_PACKAGE)
             FILES
                 ${CMAKE_CURRENT_SOURCE_DIR}/assets/icons/mininotes.svg
             DESTINATION ${CMAKE_INSTALL_DATADIR}/icons/hicolor/scalable/apps
-            RENAME io.github.Ahmad_J_Bary.UbuntuTouch-Lab.svg
+            RENAME io.github.ahmadabdelbary2001.mininote.svg
         )
 
         install(
             FILES
                 ${CMAKE_CURRENT_SOURCE_DIR}/LICENSE
-            DESTINATION ${CMAKE_INSTALL_DATADIR}/licenses/io.github.Ahmad_J_Bary.UbuntuTouch-Lab
+            DESTINATION ${CMAKE_INSTALL_DATADIR}/licenses/io.github.ahmadabdelbary2001.mininote
         )
     else()
         install(
             FILES
-                ${CMAKE_CURRENT_SOURCE_DIR}/packaging/appstream/io.github.Ahmad_J_Bary.UbuntuTouch_Lab.desktop
+                ${CMAKE_CURRENT_SOURCE_DIR}/packaging/appstream/io.github.ahmadabdelbary2001.mininote.desktop
             DESTINATION ${CMAKE_INSTALL_DATADIR}/applications
         )
 
         install(
             FILES
-                ${CMAKE_CURRENT_SOURCE_DIR}/packaging/appstream/io.github.Ahmad_J_Bary.UbuntuTouch_Lab.metainfo.xml
+                ${CMAKE_CURRENT_SOURCE_DIR}/packaging/appstream/io.github.ahmadabdelbary2001.mininote.metainfo.xml
             DESTINATION ${CMAKE_INSTALL_DATADIR}/metainfo
         )
 
@@ -110,7 +110,7 @@ if(MININOTES_PACKAGE)
             FILES
                 ${CMAKE_CURRENT_SOURCE_DIR}/assets/icons/mininotes.svg
             DESTINATION ${CMAKE_INSTALL_DATADIR}/icons/hicolor/scalable/apps
-            RENAME io.github.Ahmad_J_Bary.UbuntuTouch_Lab.svg
+            RENAME io.github.ahmadabdelbary2001.mininote.svg
         )
     endif()
 
