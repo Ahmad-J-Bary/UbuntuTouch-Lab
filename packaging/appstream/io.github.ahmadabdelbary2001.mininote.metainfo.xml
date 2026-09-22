@@ -1,0 +1,67 @@
+<?xml version="1.0" encoding="UTF-8"?>
+
+<component type="desktop-application">
+    <id>io.github.ahmadabdelbary2001.mininote</id>
+
+    <metadata_license>CC0-1.0</metadata_license>
+    <project_license>MIT</project_license>
+
+    <name>MiniNotes</name>
+
+    <summary>Offline-first notes application</summary>
+
+    <description>
+        <p>
+            MiniNotes is a small offline-first notes application built
+            with Qt, QML, C++ and SQLite.
+        </p>
+        <p>
+            Notes are stored locally on the device and remain available
+            without an Internet connection.
+        </p>
+    </description>
+
+    <launchable type="desktop-id">
+        io.github.ahmadabdelbary2001.mininote.desktop
+    </launchable>
+
+    <icon type="stock">
+        io.github.ahmadabdelbary2001.mininote
+    </icon>
+
+    <categories>
+        <category>Office</category>
+        <category>Utility</category>
+    </categories>
+
+    <keywords>
+        <keyword>Notes</keyword>
+        <keyword>SQLite</keyword>
+        <keyword>Offline</keyword>
+    </keywords>
+
+    <content_rating type="oars-1.1"/>
+
+    <releases>
+        <release version="0.2.10" date="2026-09-22">
+            <description>
+                <p>
+                    Added Flatpak packaging and GitHub Actions CI, alongside continued Linux packaging and Ubuntu Touch multi-architecture
+                    release support with automated release metadata.
+                </p>
+            </description>
+        </release>
+    </releases>
+
+    <url type="homepage">
+        https://github.com/ahmadabdelbary2001/mininote
+    </url>
+
+    <url type="bugtracker">
+        https://github.com/ahmadabdelbary2001/mininote/issues
+    </url>
+
+    <developer id="io.github.ahmadabdelbary2001">
+        <name>Ahmad Abdelbary</name>
+    </developer>
+</component>

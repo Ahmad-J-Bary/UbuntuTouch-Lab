@@ -16,7 +16,7 @@ MiniNotes is a small offline-first notes application built with **C++17, QML, Qt
 | Linux packages             | `.tar.gz`, `.deb`, `.snap`                   |
 | Flatpak                    | CI build working; Flathub submission pending |
 | Flatpak runtime            | KDE Platform `6.11`                          |
-| Flatpak App ID             | `io.github.Ahmad_J_Bary.UbuntuTouch-Lab`     |
+| Flatpak App ID             | `io.github.ahmadabdelbary2001.mininote`     |
 | Language                   | C++17                                        |
 | UI                         | QML / Qt Quick Controls                      |
 | Database                   | SQLite                                       |
@@ -161,7 +161,7 @@ The domain and application layers do not access SQLite directly.
 ├── manifest.json.in
 ├── mininotes.apparmor
 ├── mininotes.desktop
-├── io.github.Ahmad_J_Bary.UbuntuTouch-Lab.yml
+├── io.github.ahmadabdelbary2001.mininote.yml
 └── LICENSE
 ```
 
@@ -319,15 +319,15 @@ MiniNotes has Flatpak packaging based on the KDE Platform `6.11` runtime.
 The Flatpak App ID is:
 
 ```text
-io.github.Ahmad_J_Bary.UbuntuTouch-Lab
+io.github.ahmadabdelbary2001.mininote
 ```
 
 The main files are:
 
 ```text
-io.github.Ahmad_J_Bary.UbuntuTouch-Lab.yml
-packaging/flatpak/io.github.Ahmad_J_Bary.UbuntuTouch-Lab.desktop
-packaging/flatpak/io.github.Ahmad_J_Bary.UbuntuTouch-Lab.metainfo.xml
+io.github.ahmadabdelbary2001.mininote.yml
+packaging/flatpak/io.github.ahmadabdelbary2001.mininote.desktop
+packaging/flatpak/io.github.ahmadabdelbary2001.mininote.metainfo.xml
 .github/workflows/flatpak.yml
 ```
 
@@ -381,7 +381,7 @@ The AppStream metadata can be validated locally with:
 ```bash
 flatpak run --command=flatpak-builder-lint \
   org.flatpak.Builder appstream \
-  packaging/flatpak/io.github.Ahmad_J_Bary.UbuntuTouch-Lab.metainfo.xml
+  packaging/flatpak/io.github.ahmadabdelbary2001.mininote.metainfo.xml
 ```
 
 The Flatpak manifest can be validated with:
@@ -389,7 +389,7 @@ The Flatpak manifest can be validated with:
 ```bash
 flatpak run --command=flatpak-builder-lint \
   org.flatpak.Builder manifest \
-  io.github.Ahmad_J_Bary.UbuntuTouch-Lab.yml
+  io.github.ahmadabdelbary2001.mininote.yml
 ```
 
 ### Flathub status
@@ -560,7 +560,7 @@ The Flatpak build is currently available as a GitHub Actions artifact. Flathub p
 ### GitHub Releases
 
 ```text
-https://github.com/Ahmad-J-Bary/UbuntuTouch-Lab/releases
+https://github.com/ahmadabdelbary2001/mininote/releases
 ```
 
 ## CI/CD
@@ -833,17 +833,17 @@ for the complete license text.
 Source code:
 
 ```text
-https://github.com/Ahmad-J-Bary/UbuntuTouch-Lab
+https://github.com/ahmadabdelbary2001/mininote
 ```
 
 Issues and feature requests:
 
 ```text
-https://github.com/Ahmad-J-Bary/UbuntuTouch-Lab/issues
+https://github.com/ahmadabdelbary2001/mininote/issues
 ```
 
 Development and release artifacts:
 
 ```text
-https://github.com/Ahmad-J-Bary/UbuntuTouch-Lab/releases
+https://github.com/ahmadabdelbary2001/mininote/releases
 ```

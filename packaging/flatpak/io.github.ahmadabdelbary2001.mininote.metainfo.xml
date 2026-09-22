@@ -2,7 +2,7 @@
 
 <component type="desktop-application">
 
-    <id>io.github.Ahmad_J_Bary.UbuntuTouch-Lab</id>
+    <id>io.github.ahmadabdelbary2001.mininote</id>
 
     <metadata_license>CC0-1.0</metadata_license>
     <project_license>MIT</project_license>
@@ -10,7 +10,7 @@
     <name>MiniNotes</name>
     <summary>Offline-first notes application</summary>
 
-    <developer id="io.github.ahmad-j-bary">
+    <developer id="io.github.ahmadabdelbary2001">
         <name>Ahmad Abdelbary</name>
     </developer>
 
@@ -30,11 +30,11 @@
     </description>
 
     <launchable type="desktop-id">
-        io.github.Ahmad_J_Bary.UbuntuTouch-Lab.desktop
+        io.github.ahmadabdelbary2001.mininote.desktop
     </launchable>
 
     <icon type="stock">
-        io.github.Ahmad_J_Bary.UbuntuTouch-Lab
+        io.github.ahmadabdelbary2001.mininote
     </icon>
 
     <categories>
@@ -52,27 +52,27 @@
 
     <screenshots>
         <screenshot type="default">
-            <image>https://raw.githubusercontent.com/Ahmad-J-Bary/UbuntuTouch-Lab/v0.2.10/Screenshots/1.png</image>
+            <image>https://raw.githubusercontent.com/ahmadabdelbary2001/mininote/v0.2.10/Screenshots/1.png</image>
             <caption>MiniNotes application interface</caption>
         </screenshot>
 
         <screenshot>
-            <image>https://raw.githubusercontent.com/Ahmad-J-Bary/UbuntuTouch-Lab/v0.2.10/Screenshots/2.png</image>
+            <image>https://raw.githubusercontent.com/ahmadabdelbary2001/mininote/v0.2.10/Screenshots/2.png</image>
             <caption>MiniNotes note management interface</caption>
         </screenshot>
 
         <screenshot>
-            <image>https://raw.githubusercontent.com/Ahmad-J-Bary/UbuntuTouch-Lab/v0.2.10/Screenshots/3.png</image>
+            <image>https://raw.githubusercontent.com/ahmadabdelbary2001/mininote/v0.2.10/Screenshots/3.png</image>
             <caption>Creating and editing notes in MiniNotes</caption>
         </screenshot>
 
         <screenshot>
-            <image>https://raw.githubusercontent.com/Ahmad-J-Bary/UbuntuTouch-Lab/v0.2.10/Screenshots/4.png</image>
+            <image>https://raw.githubusercontent.com/ahmadabdelbary2001/mininote/v0.2.10/Screenshots/4.png</image>
             <caption>MiniNotes note editing interface</caption>
         </screenshot>
 
         <screenshot>
-            <image>https://raw.githubusercontent.com/Ahmad-J-Bary/UbuntuTouch-Lab/v0.2.10/Screenshots/5.png</image>
+            <image>https://raw.githubusercontent.com/ahmadabdelbary2001/mininote/v0.2.10/Screenshots/5.png</image>
             <caption>MiniNotes notes workflow</caption>
         </screenshot>
     </screenshots>
@@ -89,15 +89,15 @@
     </releases>
 
     <url type="homepage">
-        https://github.com/Ahmad-J-Bary/UbuntuTouch-Lab
+        https://github.com/ahmadabdelbary2001/mininote
     </url>
 
     <url type="bugtracker">
-        https://github.com/Ahmad-J-Bary/UbuntuTouch-Lab/issues
+        https://github.com/ahmadabdelbary2001/mininote/issues
     </url>
 
     <url type="vcs-browser">
-        https://github.com/Ahmad-J-Bary/UbuntuTouch-Lab
+        https://github.com/ahmadabdelbary2001/mininote
     </url>
 
 </component>
