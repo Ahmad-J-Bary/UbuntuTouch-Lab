@@ -52,36 +52,36 @@
 
     <screenshots>
         <screenshot type="default">
-            <image>https://raw.githubusercontent.com/Ahmad-J-Bary/UbuntuTouch-Lab/v0.2.8/Screenshots/1.png</image>
+            <image>https://raw.githubusercontent.com/Ahmad-J-Bary/UbuntuTouch-Lab/v0.2.9/Screenshots/1.png</image>
             <caption>MiniNotes application interface</caption>
         </screenshot>
 
         <screenshot>
-            <image>https://raw.githubusercontent.com/Ahmad-J-Bary/UbuntuTouch-Lab/v0.2.8/Screenshots/2.png</image>
+            <image>https://raw.githubusercontent.com/Ahmad-J-Bary/UbuntuTouch-Lab/v0.2.9/Screenshots/2.png</image>
             <caption>MiniNotes note management interface</caption>
         </screenshot>
 
         <screenshot>
-            <image>https://raw.githubusercontent.com/Ahmad-J-Bary/UbuntuTouch-Lab/v0.2.8/Screenshots/3.png</image>
+            <image>https://raw.githubusercontent.com/Ahmad-J-Bary/UbuntuTouch-Lab/v0.2.9/Screenshots/3.png</image>
             <caption>Creating and editing notes in MiniNotes</caption>
         </screenshot>
 
         <screenshot>
-            <image>https://raw.githubusercontent.com/Ahmad-J-Bary/UbuntuTouch-Lab/v0.2.8/Screenshots/4.png</image>
+            <image>https://raw.githubusercontent.com/Ahmad-J-Bary/UbuntuTouch-Lab/v0.2.9/Screenshots/4.png</image>
             <caption>MiniNotes note editing interface</caption>
         </screenshot>
 
         <screenshot>
-            <image>https://raw.githubusercontent.com/Ahmad-J-Bary/UbuntuTouch-Lab/v0.2.8/Screenshots/5.png</image>
+            <image>https://raw.githubusercontent.com/Ahmad-J-Bary/UbuntuTouch-Lab/v0.2.9/Screenshots/5.png</image>
             <caption>MiniNotes notes workflow</caption>
         </screenshot>
     </screenshots>
 
     <releases>
-        <release version="0.2.8" date="2026-09-21">
+        <release version="0.2.9" date="2026-09-22">
             <description>
                 <p>
-                    Improved Linux packaging and Ubuntu Touch multi-architecture
+                    Added Flatpak packaging and GitHub Actions CI, alongside continued Linux packaging and Ubuntu Touch multi-architecture
                     release support with automated release metadata.
                 </p>
             </description>

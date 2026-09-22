@@ -2,24 +2,27 @@
 
 MiniNotes is a small offline-first notes application built with **C++17, QML, Qt and SQLite**. It is designed as a native Qt application with a layered architecture, local persistence, touch-friendly UI, and reproducible builds for Ubuntu Touch and Linux.
 
-> **Development version: 0.2.8**
+> **Development version: 0.2.9**
 > **Status: Experimental / Development**
 
 ## Status
 
-| Area                       | Current state              |
-| -------------------------- | -------------------------- |
-| Application version        | **0.2.8**                  |
-| Ubuntu Touch framework     | `ubuntu-touch-24.04-1.x`   |
-| Ubuntu Touch Click targets | `arm64`, `armhf`, `amd64`  |
-| Linux desktop              | x86_64                     |
-| Linux packages             | `.tar.gz`, `.deb`, `.snap` |
-| Language                   | C++17                      |
-| UI                         | QML / Qt Quick Controls    |
-| Database                   | SQLite                     |
-| Build system               | CMake + CMake Presets      |
-| Ubuntu Touch builder       | Clickable 8.10.0           |
-| License                    | MIT                        |
+| Area                       | Current state                                |
+| -------------------------- | -------------------------------------------- |
+| Application version        | **0.2.9**                                    |
+| Ubuntu Touch framework     | `ubuntu-touch-24.04-1.x`                     |
+| Ubuntu Touch Click targets | `arm64`, `armhf`, `amd64`                    |
+| Linux desktop              | x86_64                                       |
+| Linux packages             | `.tar.gz`, `.deb`, `.snap`                   |
+| Flatpak                    | CI build working; Flathub submission pending |
+| Flatpak runtime            | KDE Platform `6.11`                          |
+| Flatpak App ID             | `io.github.Ahmad_J_Bary.UbuntuTouch-Lab`     |
+| Language                   | C++17                                        |
+| UI                         | QML / Qt Quick Controls                      |
+| Database                   | SQLite                                       |
+| Build system               | CMake + CMake Presets                        |
+| Ubuntu Touch builder       | Clickable 8.10.0                             |
+| License                    | MIT                                          |
 
 ## Features
 
@@ -146,14 +149,19 @@ The domain and application layers do not access SQLite directly.
 ├── tests/
 ├── assets/
 ├── packaging/
+│   ├── appstream/
+│   └── flatpak/
 ├── snap/
 ├── Screenshots/
+├── .github/
+│   └── workflows/
 ├── CMakeLists.txt
 ├── CMakePresets.json
 ├── clickable.yaml
 ├── manifest.json.in
 ├── mininotes.apparmor
 ├── mininotes.desktop
+├── io.github.Ahmad_J_Bary.UbuntuTouch-Lab.yml
 └── LICENSE
 ```
 
@@ -177,13 +185,14 @@ The domain and application layers do not access SQLite directly.
 * Clickable
 * Snapcraft
 * CPack / Debian packaging
+* Flatpak / flatpak-builder
 * GitHub Actions
 
 The Linux desktop CI uses **Qt 6**.
 
 The Ubuntu Touch Click package uses the `ubuntu-touch-24.04-1.x` framework and its target dependencies defined in `clickable.yaml`.
 
-The CMake project can resolve Qt 5 or Qt 6 depending on the build environment, while the current Linux desktop and Snap builds use Qt 6.
+The CMake project can resolve Qt 5 or Qt 6 depending on the build environment, while the current Linux desktop, Snap and Flatpak builds use Qt 6.
 
 ## Requirements
 
@@ -215,6 +224,8 @@ sudo apt install -y \
     qml6-module-qtquick-layouts \
     qml6-module-qtqml-workerscript
 ```
+
+Flatpak CI is provided by GitHub Actions. Local Flatpak metadata validation can be performed with `flatpak-builder-lint`; a full local Flatpak build additionally requires the KDE runtime/SDK used by the manifest.
 
 ## Linux Desktop Development
 
@@ -301,6 +312,106 @@ mininotes-<version>-linux-x86_64.tar.gz
 mininotes_<version>_amd64.snap
 ```
 
+## Flatpak
+
+MiniNotes has Flatpak packaging based on the KDE Platform `6.11` runtime.
+
+The Flatpak App ID is:
+
+```text
+io.github.Ahmad_J_Bary.UbuntuTouch-Lab
+```
+
+The main files are:
+
+```text
+io.github.Ahmad_J_Bary.UbuntuTouch-Lab.yml
+packaging/flatpak/io.github.Ahmad_J_Bary.UbuntuTouch-Lab.desktop
+packaging/flatpak/io.github.Ahmad_J_Bary.UbuntuTouch-Lab.metainfo.xml
+.github/workflows/flatpak.yml
+```
+
+The Flatpak build uses a dedicated CMake option:
+
+```text
+-DMININOTES_PACKAGE=ON
+-DMININOTES_FLATPAK=ON
+```
+
+This keeps Flatpak desktop metadata and installation paths separate from the existing Snap/DEB Linux metadata.
+
+### Flatpak CI
+
+Flatpak CI runs on:
+
+```text
+push to main
+pull requests
+manual workflow dispatch
+```
+
+The workflow:
+
+```text
+Checkout
+   ↓
+Flathub Flatpak CI container
+   ↓
+flatpak-builder
+   ↓
+KDE Platform 6.11 application build
+   ↓
+Flatpak bundle
+   ↓
+GitHub Actions artifact
+```
+
+Workflow file:
+
+```text
+.github/workflows/flatpak.yml
+```
+
+The CI build is currently successful. The resulting Flatpak is uploaded as a GitHub Actions artifact.
+
+### Flatpak metadata validation
+
+The AppStream metadata can be validated locally with:
+
+```bash
+flatpak run --command=flatpak-builder-lint \
+  org.flatpak.Builder appstream \
+  packaging/flatpak/io.github.Ahmad_J_Bary.UbuntuTouch-Lab.metainfo.xml
+```
+
+The Flatpak manifest can be validated with:
+
+```bash
+flatpak run --command=flatpak-builder-lint \
+  org.flatpak.Builder manifest \
+  io.github.Ahmad_J_Bary.UbuntuTouch-Lab.yml
+```
+
+### Flathub status
+
+The application is prepared for Flathub submission, but it is **not published on Flathub yet**.
+
+The planned distribution flow is:
+
+```text
+GitHub repository
+        ↓
+Flathub submission
+        ↓
+Review / validation
+        ↓
+Flathub application repository
+        ↓
+Published Flatpak
+```
+
+Flathub will become the primary public distribution channel for the Flatpak build once the initial submission is accepted.
+
 ## Ubuntu Touch Development
 
 MiniNotes uses:
@@ -370,8 +481,6 @@ View application logs:
 ```bash
 clickable logs
 ```
-
-Clickable's `install`, `launch`, `logs`, `devices`, and architecture options are part of the current Clickable 8 command set.
 
 ## Ubuntu Touch Release Targets
 
@@ -444,6 +553,10 @@ Linux amd64 .deb
 Linux amd64 .snap
 ```
 
+### Flatpak
+
+The Flatpak build is currently available as a GitHub Actions artifact. Flathub publication is pending the initial application submission and review.
+
 ### GitHub Releases
 
 ```text
@@ -452,11 +565,12 @@ https://github.com/Ahmad-J-Bary/UbuntuTouch-Lab/releases
 
 ## CI/CD
 
-The repository uses two main GitHub Actions workflows:
+The repository uses three main GitHub Actions workflows:
 
 ```text
 .github/workflows/ubuntu-touch.yml
 .github/workflows/linux-desktop.yml
+.github/workflows/flatpak.yml
 ```
 
 ### Ubuntu Touch workflow
@@ -505,6 +619,22 @@ QML E2E
 Startup smoke test
 ```
 
+### Flatpak workflow
+
+```text
+Checkout
+   ↓
+KDE Flatpak CI container
+   ↓
+flatpak-builder
+   ↓
+Application package
+   ↓
+GitHub Actions artifact
+```
+
+The Flatpak workflow is intentionally separate from the Ubuntu Touch and Linux release workflows. Flathub publication is a separate distribution process.
+
 ## Automated Releases
 
 Releases use semantic version tags:
@@ -516,7 +646,7 @@ vMAJOR.MINOR.PATCH
 Example:
 
 ```text
-v0.2.8
+v0.2.9
 ```
 
 The application version is taken from:
@@ -530,8 +660,8 @@ The release tag must match the application version.
 For example:
 
 ```text
-CMakeLists.txt → 0.2.8
-Git tag        → v0.2.8
+CMakeLists.txt → 0.2.9
+Git tag        → v0.2.9
 ```
 
 A mismatch stops the release pipeline.
@@ -547,7 +677,9 @@ Linux AMD64 .deb
 Linux AMD64 .snap
 ```
 
-All release artifacts are attached to the corresponding GitHub Release.
+The Flatpak workflow is currently CI-based and independent of the release artifact pipeline. Once Flathub publication is established, Flatpak updates will follow the Flathub maintenance workflow.
+
+All release artifacts produced by the release pipeline are attached to the corresponding GitHub Release.
 
 ## Automated Changelog
 
@@ -591,26 +723,32 @@ The normal release flow is:
         ↓
 2. Implement and test changes
         ↓
-3. Commit changes
+3. Update release metadata
         ↓
-4. Push to main
+4. Commit changes
         ↓
-5. Create matching vX.Y.Z tag
+5. Push to main
         ↓
-6. GitHub Actions validates the version
+6. Verify CI
         ↓
-7. Build all targets
+7. Create matching vX.Y.Z tag
         ↓
-8. Generate Changelog
+8. GitHub Actions validates the version
         ↓
-9. Publish Ubuntu Touch packages
+9. Build all release targets
         ↓
-10. Publish Snap
+10. Generate Changelog
         ↓
-11. Create / update GitHub Release
+11. Publish Ubuntu Touch packages
+        ↓
+12. Publish Snap
+        ↓
+13. Create / update GitHub Release
+        ↓
+14. Maintain Flatpak / Flathub separately
 ```
 
-The release pipeline is designed so that the version, packages and release notes come from the same Git revision.
+For the current Flatpak work, `v0.2.9` is the first planned release version containing the Flatpak packaging and CI integration.
 
 ## Data and Persistence
 
