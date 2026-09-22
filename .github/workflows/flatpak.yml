@@ -34,3 +34,56 @@ jobs:
           upload-artifact: true
           artifact-name: mininotes-flatpak
           verbose: true
+
+  publish:
+    name: Publish Flatpak to GitHub Release
+    if: startsWith(github.ref, 'refs/tags/v')
+    needs:
+      - flatpak
+    runs-on: ubuntu-24.04
+
+    permissions:
+      contents: write
+
+    steps:
+      - name: Download Flatpak artifact
+        uses: actions/download-artifact@v4
+        with:
+          name: mininotes-flatpak
+          path: dist
+
+      - name: Wait for GitHub Release
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          set -euo pipefail
+
+          for attempt in $(seq 1 60); do
+            if gh release view "$GITHUB_REF_NAME" \
+              --repo "$GITHUB_REPOSITORY" >/dev/null 2>&1; then
+              echo "Release $GITHUB_REF_NAME is available."
+              break
+            fi
+
+            echo "Release $GITHUB_REF_NAME is not available yet; retrying..."
+            sleep 5
+          done
+
+          gh release view "$GITHUB_REF_NAME" \
+            --repo "$GITHUB_REPOSITORY" >/dev/null
+
+      - name: Upload Flatpak to GitHub Release
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          set -euo pipefail
+
+          test -f dist/mininotes.flatpak
+
+          ls -lh dist/mininotes.flatpak
+
+          gh release upload \
+            "$GITHUB_REF_NAME" \
+            dist/mininotes.flatpak \
+            --repo "$GITHUB_REPOSITORY" \
+            --clobber
