@@ -1,0 +1,29 @@
+app-id: io.github.Ahmad_J_Bary.UbuntuTouch-Lab
+
+runtime: org.kde.Platform
+runtime-version: '6.11'
+sdk: org.kde.Sdk
+
+command: mininotes
+
+finish-args:
+  - --share=ipc
+  - --socket=wayland
+  - --socket=fallback-x11
+  - --device=dri
+
+modules:
+  - name: mininotes
+
+    buildsystem: cmake-ninja
+
+    config-opts:
+      - -DCMAKE_BUILD_TYPE=Release
+      - -DCMAKE_INSTALL_PREFIX=/app
+      - -DMININOTES_BUILD_TESTS=OFF
+      - -DMININOTES_PACKAGE=ON
+      - -DMININOTES_FLATPAK=ON
+
+    sources:
+      - type: dir
+        path: .

@@ -1,0 +1,103 @@
+<?xml version="1.0" encoding="UTF-8"?>
+
+<component type="desktop-application">
+
+    <id>io.github.Ahmad_J_Bary.UbuntuTouch-Lab</id>
+
+    <metadata_license>CC0-1.0</metadata_license>
+    <project_license>MIT</project_license>
+
+    <name>MiniNotes</name>
+    <summary>Offline-first notes application</summary>
+
+    <developer id="io.github.ahmad-j-bary">
+        <name>Ahmad Abdelbary</name>
+    </developer>
+
+    <description>
+        <p>
+            MiniNotes is a small offline-first notes application built
+            with Qt, QML, C++ and SQLite.
+        </p>
+        <p>
+            Notes are stored locally and remain available without an
+            Internet connection.
+        </p>
+        <p>
+            Create, edit and manage notes through a lightweight desktop
+            interface designed for fast offline use.
+        </p>
+    </description>
+
+    <launchable type="desktop-id">
+        io.github.Ahmad_J_Bary.UbuntuTouch-Lab.desktop
+    </launchable>
+
+    <icon type="stock">
+        io.github.Ahmad_J_Bary.UbuntuTouch-Lab
+    </icon>
+
+    <categories>
+        <category>Office</category>
+        <category>Utility</category>
+    </categories>
+
+    <keywords>
+        <keyword>Notes</keyword>
+        <keyword>SQLite</keyword>
+        <keyword>Offline</keyword>
+    </keywords>
+
+    <content_rating type="oars-1.1"/>
+
+    <screenshots>
+        <screenshot type="default">
+            <image>https://raw.githubusercontent.com/Ahmad-J-Bary/UbuntuTouch-Lab/v0.2.8/Screenshots/1.png</image>
+            <caption>MiniNotes application interface</caption>
+        </screenshot>
+
+        <screenshot>
+            <image>https://raw.githubusercontent.com/Ahmad-J-Bary/UbuntuTouch-Lab/v0.2.8/Screenshots/2.png</image>
+            <caption>MiniNotes note management interface</caption>
+        </screenshot>
+
+        <screenshot>
+            <image>https://raw.githubusercontent.com/Ahmad-J-Bary/UbuntuTouch-Lab/v0.2.8/Screenshots/3.png</image>
+            <caption>Creating and editing notes in MiniNotes</caption>
+        </screenshot>
+
+        <screenshot>
+            <image>https://raw.githubusercontent.com/Ahmad-J-Bary/UbuntuTouch-Lab/v0.2.8/Screenshots/4.png</image>
+            <caption>MiniNotes note editing interface</caption>
+        </screenshot>
+
+        <screenshot>
+            <image>https://raw.githubusercontent.com/Ahmad-J-Bary/UbuntuTouch-Lab/v0.2.8/Screenshots/5.png</image>
+            <caption>MiniNotes notes workflow</caption>
+        </screenshot>
+    </screenshots>
+
+    <releases>
+        <release version="0.2.8" date="2026-09-21">
+            <description>
+                <p>
+                    Improved Linux packaging and Ubuntu Touch multi-architecture
+                    release support with automated release metadata.
+                </p>
+            </description>
+        </release>
+    </releases>
+
+    <url type="homepage">
+        https://github.com/Ahmad-J-Bary/UbuntuTouch-Lab
+    </url>
+
+    <url type="bugtracker">
+        https://github.com/Ahmad-J-Bary/UbuntuTouch-Lab/issues
+    </url>
+
+    <url type="vcs-browser">
+        https://github.com/Ahmad-J-Bary/UbuntuTouch-Lab
+    </url>
+
+</component>

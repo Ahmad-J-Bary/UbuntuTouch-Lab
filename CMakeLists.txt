@@ -51,6 +51,12 @@ option(
     OFF
 )
 
+option(
+    MININOTES_FLATPAK
+    "Use Flatpak-specific desktop metadata and installation paths"
+    OFF
+)
+
 if(MININOTES_PACKAGE)
     install(
         TARGETS mininotes
@@ -62,24 +68,51 @@ if(MININOTES_PACKAGE)
         DESTINATION ${CMAKE_INSTALL_DATADIR}/mininotes/qml
     )
 
-    install(
-        FILES
-            ${CMAKE_CURRENT_SOURCE_DIR}/packaging/appstream/io.github.Ahmad_J_Bary.UbuntuTouch_Lab.desktop
-        DESTINATION ${CMAKE_INSTALL_DATADIR}/applications
-    )
+    if(MININOTES_FLATPAK)
+        install(
+            FILES
+                ${CMAKE_CURRENT_SOURCE_DIR}/packaging/flatpak/io.github.Ahmad_J_Bary.UbuntuTouch-Lab.desktop
+            DESTINATION ${CMAKE_INSTALL_DATADIR}/applications
+        )
 
-    install(
-        FILES
-            ${CMAKE_CURRENT_SOURCE_DIR}/packaging/appstream/io.github.Ahmad_J_Bary.UbuntuTouch_Lab.metainfo.xml
-        DESTINATION ${CMAKE_INSTALL_DATADIR}/metainfo
-    )
+        install(
+            FILES
+                ${CMAKE_CURRENT_SOURCE_DIR}/packaging/flatpak/io.github.Ahmad_J_Bary.UbuntuTouch-Lab.metainfo.xml
+            DESTINATION ${CMAKE_INSTALL_DATADIR}/metainfo
+        )
 
-    install(
-        FILES
-            ${CMAKE_CURRENT_SOURCE_DIR}/assets/icons/mininotes.svg
-        DESTINATION ${CMAKE_INSTALL_DATADIR}/icons/hicolor/scalable/apps
-        RENAME io.github.Ahmad_J_Bary.UbuntuTouch_Lab.svg
-    )
+        install(
+            FILES
+                ${CMAKE_CURRENT_SOURCE_DIR}/assets/icons/mininotes.svg
+            DESTINATION ${CMAKE_INSTALL_DATADIR}/icons/hicolor/scalable/apps
+            RENAME io.github.Ahmad_J_Bary.UbuntuTouch-Lab.svg
+        )
+
+        install(
+            FILES
+                ${CMAKE_CURRENT_SOURCE_DIR}/LICENSE
+            DESTINATION ${CMAKE_INSTALL_DATADIR}/licenses/io.github.Ahmad_J_Bary.UbuntuTouch-Lab
+        )
+    else()
+        install(
+            FILES
+                ${CMAKE_CURRENT_SOURCE_DIR}/packaging/appstream/io.github.Ahmad_J_Bary.UbuntuTouch_Lab.desktop
+            DESTINATION ${CMAKE_INSTALL_DATADIR}/applications
+        )
+
+        install(
+            FILES
+                ${CMAKE_CURRENT_SOURCE_DIR}/packaging/appstream/io.github.Ahmad_J_Bary.UbuntuTouch_Lab.metainfo.xml
+            DESTINATION ${CMAKE_INSTALL_DATADIR}/metainfo
+        )
+
+        install(
+            FILES
+                ${CMAKE_CURRENT_SOURCE_DIR}/assets/icons/mininotes.svg
+            DESTINATION ${CMAKE_INSTALL_DATADIR}/icons/hicolor/scalable/apps
+            RENAME io.github.Ahmad_J_Bary.UbuntuTouch_Lab.svg
+        )
+    endif()
 
     set(CPACK_PACKAGE_NAME "mininotes")
     set(CPACK_PACKAGE_VENDOR "MiniNotes Developers")
