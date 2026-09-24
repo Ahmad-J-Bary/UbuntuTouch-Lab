@@ -34,3 +34,8 @@ cache/
 .idea/
 *.swp
 *~
+# Windows deployment artifacts
+dist/
+
+# Local developer CMake presets
+CMakeUserPresets.json
