@@ -1,0 +1,143 @@
+if(NOT WIN32)
+    return()
+endif()
+
+if(POLICY CMP0207)
+    cmake_policy(SET CMP0207 NEW)
+endif()
+
+set(MININOTES_MINGW_RUNTIME_DIR "@MININOTES_MINGW_RUNTIME_DIR@")
+
+if(NOT EXISTS "${MININOTES_MINGW_RUNTIME_DIR}")
+    message(
+        FATAL_ERROR
+        "MiniNotes: MinGW runtime directory does not exist: ${MININOTES_MINGW_RUNTIME_DIR}"
+    )
+endif()
+
+file(REAL_PATH
+    "${MININOTES_MINGW_RUNTIME_DIR}"
+    _mininotes_mingw_runtime_root
+)
+
+file(REAL_PATH
+    "${CMAKE_INSTALL_PREFIX}"
+    _mininotes_install_root
+)
+
+message(
+    STATUS
+    "MiniNotes: scanning Windows runtime dependencies"
+)
+
+file(GLOB_RECURSE _mininotes_runtime_inputs
+    LIST_DIRECTORIES FALSE
+    "${CMAKE_INSTALL_PREFIX}/*.exe"
+    "${CMAKE_INSTALL_PREFIX}/*.dll"
+)
+
+if(NOT _mininotes_runtime_inputs)
+    message(
+        FATAL_ERROR
+        "MiniNotes: no executable or DLLs found in ${CMAKE_INSTALL_PREFIX}"
+    )
+endif()
+
+file(GET_RUNTIME_DEPENDENCIES
+    EXECUTABLES
+        "${CMAKE_INSTALL_PREFIX}/mininotes.exe"
+
+    LIBRARIES
+        ${_mininotes_runtime_inputs}
+
+    DIRECTORIES
+        "${_mininotes_mingw_runtime_root}"
+
+    # Qt DLLs are already deployed by windeployqt.
+    PRE_EXCLUDE_REGEXES
+        "^qt6.*\\.dll$"
+
+    RESOLVED_DEPENDENCIES_VAR
+        _mininotes_resolved_dependencies
+
+    UNRESOLVED_DEPENDENCIES_VAR
+        _mininotes_unresolved_dependencies
+)
+
+foreach(_dependency IN LISTS _mininotes_resolved_dependencies)
+
+    file(REAL_PATH
+        "${_dependency}"
+        _dependency_real
+    )
+
+    file(RELATIVE_PATH
+        _relative_to_mingw
+        "${_mininotes_mingw_runtime_root}"
+        "${_dependency_real}"
+    )
+
+    # Only copy DLLs originating from MSYS2/UCRT64.
+    # Windows system DLLs are intentionally ignored.
+    if(NOT _relative_to_mingw MATCHES "^\\.\\.")
+
+        get_filename_component(
+            _dependency_name
+            "${_dependency_real}"
+            NAME
+        )
+
+        # Never replace a DLL already deployed by Qt.
+        if(NOT _dependency_name MATCHES "^[Qq][Tt]6.*\\.dll$")
+
+            set(_destination
+                "${CMAKE_INSTALL_PREFIX}/${_dependency_name}"
+            )
+
+            if(NOT EXISTS "${_destination}")
+
+                message(
+                    STATUS
+                    "MiniNotes: deploying MinGW runtime ${_dependency_name}"
+                )
+
+                file(
+                    COPY
+                    "${_dependency_real}"
+                    DESTINATION
+                    "${CMAKE_INSTALL_PREFIX}"
+                )
+
+            endif()
+
+        endif()
+
+    endif()
+
+endforeach()
+
+if(_mininotes_unresolved_dependencies)
+
+    list(
+        SORT
+        _mininotes_unresolved_dependencies
+    )
+
+    message(
+        STATUS
+        "MiniNotes: unresolved runtime dependencies:"
+    )
+
+    foreach(_unresolved IN LISTS _mininotes_unresolved_dependencies)
+        message(
+            STATUS
+            "  ${_unresolved}"
+        )
+    endforeach()
+
+endif()
+
+message(
+    STATUS
+    "MiniNotes: MinGW runtime dependency deployment complete"
+)

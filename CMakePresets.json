@@ -61,6 +61,46 @@
                 "MININOTES_BUILD_TESTS": "OFF",
                 "MININOTES_PACKAGE": "ON"
             }
+        },
+
+        {
+            "name": "windows-base",
+            "hidden": true,
+            "generator": "Ninja",
+            "binaryDir": "${sourceDir}/build/${presetName}",
+            "cacheVariables": {
+                "CMAKE_EXPORT_COMPILE_COMMANDS": "ON"
+            }
+        },
+        {
+            "name": "windows-debug",
+            "inherits": "windows-base",
+            "description": "Windows Debug build",
+            "cacheVariables": {
+                "CMAKE_BUILD_TYPE": "Debug",
+                "MININOTES_BUILD_TESTS": "OFF",
+                "MININOTES_PACKAGE": "OFF"
+            }
+        },
+        {
+            "name": "windows-release",
+            "inherits": "windows-base",
+            "description": "Windows Release build and deployment",
+            "cacheVariables": {
+                "CMAKE_BUILD_TYPE": "Release",
+                "MININOTES_BUILD_TESTS": "OFF",
+                "MININOTES_PACKAGE": "ON"
+            }
+        },
+        {
+            "name": "windows-tests",
+            "inherits": "windows-base",
+            "description": "Windows Debug build with backend tests",
+            "cacheVariables": {
+                "CMAKE_BUILD_TYPE": "Debug",
+                "MININOTES_BUILD_TESTS": "ON",
+                "MININOTES_PACKAGE": "OFF"
+            }
         }
     ],
     "buildPresets": [
@@ -83,12 +123,32 @@
         {
             "name": "linux-package",
             "configurePreset": "linux-package"
+        },
+
+        {
+            "name": "windows-debug",
+            "configurePreset": "windows-debug"
+        },
+        {
+            "name": "windows-release",
+            "configurePreset": "windows-release"
+        },
+        {
+            "name": "windows-tests",
+            "configurePreset": "windows-tests"
         }
     ],
     "testPresets": [
         {
             "name": "linux-tests",
             "configurePreset": "linux-tests",
+            "output": {
+                "outputOnFailure": true
+            }
+        },
+        {
+            "name": "windows-tests",
+            "configurePreset": "windows-tests",
             "output": {
                 "outputOnFailure": true
             }
